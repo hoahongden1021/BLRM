@@ -1,0 +1,10 @@
+Recovered starter-scene mapping from client APK
+
+9068.scn  -> 轩辕奇境 -> East country path (links to 桐木林 / 巨木村 family)
+8068.scn  -> 轩辕奇境 -> South country path (links to 青松林 / 南屏村 family)
+10046.scn -> 轩辕奇境 -> North country path (links to 黑森林 / 忘忧村 family)
+
+All three:
+- main dimensions 45 x 60
+- back layer 25 x 25
+- back-layer tile image: IMG 16021 (present in APK)

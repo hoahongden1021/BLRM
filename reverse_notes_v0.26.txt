@@ -1,0 +1,56 @@
+Tru Than 1.17 - Reverse Notes v0.26
+==================================
+
+[Stable baseline]
+- Starter scene: 9068 / 8068 / 10046 (country-dependent 轩辕奇境)
+- Player spawn: (180,230)
+- Player movement speed: 40
+- Client->server movement: cmd133 compact X/Y/control packet
+
+[Movement confirmation]
+The v0.25 test moved from the initial (180,230) coordinate to changing world
+coordinates while cmd133 continued normally. No server-side movement echo is
+required for the local player's own movement.
+
+[Tutorial evidence from classes.dex]
+ForceGuide contains the exact names:
+  彩云仙子
+  火狐妖
+and the instruction:
+  按导航键移动，向左移向彩云仙子
+This establishes expected tutorial entity names and general direction, not their
+original server objectDataId / runtime id / exact coordinates.
+
+[APK .obj image-reference prefix]
+Observed on bundled v1.17 assets:
+  byte
+  byte
+  byte slotCount
+  repeat slotCount:
+      unsigned short imageId
+      byte refFlag
+0xFFFF imageId is used as an empty/sentinel slot in some objects.
+
+Verified candidate assets used only in diagnostic probe mode:
+  obj 1014 -> img 7197
+  obj 1015 -> img 7198
+  obj 1016 -> img 7199
+  obj 1155 -> img 1207
+  obj 2077 -> img 3277 (+ empty 0xFFFF slots)
+
+Association of those visual assets with 彩云仙子 / 火狐妖 is NOT asserted by
+v0.26.  This is deliberately separated from the proven cmd132 wire format.
+
+[cmd132]
+GNPC encoder remains the classes.dex-derived encoder from v0.25. Selectable
+entities use nonzero maxHP/maxMP to avoid GSprite.drawSelected divide-by-zero.
+
+[Diagnostic logging]
+Unknown client commands now print body length + first u8/i16/i32 interpretations
+and up to 96 body bytes.  Once a selectable probe is clicked/talked to/attacked,
+this should make the next command-ID reverse pass easier.
+
+[World-state preparation]
+ROLE[x] and ROLE[y] are updated from every decoded cmd133 movement packet. This
+is still single-user global state, but it is the first step needed before AOI,
+NPC interaction range checks and later multi-session state.
