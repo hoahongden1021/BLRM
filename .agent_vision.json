@@ -1,0 +1,60 @@
+{
+  "image": "C:\\Users\\Mech\\Desktop\\TruThan_RE\\.agent_screen.png",
+  "image_size": [
+    2992,
+    1344
+  ],
+  "model": "qwen3-vl-8k:latest",
+  "focus": {
+    "lines": [
+      "mCurrentFocus=Window{cac7e2a u0 com.t4game/j2ab.android.app.J2ABMIDletActivity}",
+      "mFocusedApp=ActivityRecord{8294b0 u0 com.t4game/j2ab.android.app.J2ABMIDletActivity t134}"
+    ],
+    "truthan_foreground": true
+  },
+  "vision": {
+    "type": "object",
+    "properties": {
+      "screen_summary": "A network error dialog displayed in a game, prompting the user to click '确定' to reconnect or '退出' to exit.",
+      "visible_text": [
+        "网络故障，点击确定重新连接",
+        "确定",
+        "退出"
+      ],
+      "interactive_elements": [
+        {
+          "label": "确定",
+          "kind": "button",
+          "center_norm": [
+            55,
+            970
+          ],
+          "bbox_norm": [
+            47,
+            960,
+            63,
+            990
+          ],
+          "confidence": 0.95
+        },
+        {
+          "label": "退出",
+          "kind": "button",
+          "center_norm": [
+            300,
+            970
+          ],
+          "bbox_norm": [
+            291,
+            960,
+            307,
+            990
+          ],
+          "confidence": 0.95
+        }
+      ],
+      "dialog": "网络故障，点击确定重新连接",
+      "notes": "The screen shows a network error dialog with two buttons for reconnection or exit."
+    }
+  }
+}

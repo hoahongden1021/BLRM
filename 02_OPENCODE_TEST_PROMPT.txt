@@ -1,0 +1,21 @@
+Use the repository GUI tool for emulator interaction.
+
+First read:
+docs/TRUTHAN_GUI_TOOL.md
+
+Then:
+1. Run `python tools/truthan_gui.py doctor`.
+2. Run `python tools/truthan_gui.py status`.
+3. Make sure TruThan is foreground; launch it if necessary.
+4. Run `python tools/truthan_gui.py observe`.
+5. Use the returned visual JSON to identify the current state.
+6. If a safe visible button is required to continue, use `python tools/truthan_gui.py click "<target>"`.
+7. Re-observe after every action and continue only from real visual evidence.
+
+Goal:
+Reach the normal logged-in game state using already-saved credentials/session if available.
+
+Do not invent credentials.
+Do not use random coordinates.
+Do not modify project source files.
+Do not claim success until a fresh observation proves the target game state is visible.

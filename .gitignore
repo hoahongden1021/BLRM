@@ -1,0 +1,27 @@
+# Local IDE settings
+.idea/
+
+# Runtime logs and canonical debug capture bundles
+*.log
+truthan_packet_logs/
+/debug_runs/
+TruThan_debug_*.zip
+
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Temporary build output (keep original APK/resource evidence tracked)
+/build/
+/dist/
+/server/build/
+/server/dist/
+*.tmp
+*.temp
+*.swp
+*~

@@ -1,0 +1,232 @@
+﻿@echo off
+setlocal EnableExtensions EnableDelayedExpansion
+chcp 65001 >nul
+title TRUTHAN_TEST_CAPTURE
+
+rem ============================================================
+rem Tru Than RE - clean test + evidence capture
+rem
+rem What it does:
+rem   1. Loads 00_setup_env.bat
+rem   2. Verifies ADB/device
+rem   3. Clears working packet logs; preserves previous debug runs
+rem   4. Clears Android logcat
+rem   5. Recreates adb reverse rules
+rem   6. Starts the current Python server in a separate window
+rem   7. Launches com.t4game
+rem   8. Waits while YOU test
+rem   9. Captures screenshot, logcat, packet logs, device info,
+rem      git status/diff and the exact server source
+rem  10. Creates ONE ZIP to upload for analysis
+rem ============================================================
+
+set "ROOT=%~dp0"
+call "%ROOT%00_setup_env.bat"
+if errorlevel 1 (
+    echo.
+    echo [FATAL] Environment setup failed.
+    pause
+    exit /b 1
+)
+
+for /f %%I in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMdd_HHmmss"') do set "RUN_ID=%%I"
+set "RUN_DIR=%TRUTHAN_DEBUG_ROOT%\%RUN_ID%"
+set "BUNDLE=%TRUTHAN_DEBUG_ROOT%\TruThan_debug_%RUN_ID%.zip"
+
+echo.
+echo [1/10] Checking ADB...
+"%ADB_EXE%" start-server >nul 2>&1
+"%ADB_EXE%" get-state >nul 2>&1
+if errorlevel 1 (
+    echo [ERROR] No ADB device/emulator detected.
+    echo Start the Android Studio emulator and run this file again.
+    pause
+    exit /b 20
+)
+
+rem ---------- Clean old evidence ----------
+echo [2/10] Cleaning OLD logs...
+rem Keep completed and partial runs so a new test cannot erase prior evidence.
+mkdir "%RUN_DIR%" >nul 2>&1
+
+if exist "%TRUTHAN_PACKET_LOG_DIR%" (
+    del /q "%TRUTHAN_PACKET_LOG_DIR%\*" >nul 2>&1
+) else (
+    mkdir "%TRUTHAN_PACKET_LOG_DIR%" >nul 2>&1
+)
+
+rem ---------- Make logcat useful ----------
+echo [3/10] Resetting Android logs...
+"%ADB_EXE%" logcat -c
+"%ADB_EXE%" logcat -G 16M >nul 2>&1
+
+rem Force-stop so every run starts from a clean app lifecycle.
+"%ADB_EXE%" shell am force-stop "%TRUTHAN_PACKAGE%" >nul 2>&1
+
+rem ---------- ADB reverse ----------
+echo [4/10] Recreating adb reverse rules...
+for %%P in (
+    %TRUTHAN_PORT_AUX1%
+    %TRUTHAN_PORT_AUX2%
+    %TRUTHAN_PORT_GAME%
+    %TRUTHAN_PORT_AUX3%
+    %TRUTHAN_PORT_AUTH%
+) do (
+    "%ADB_EXE%" reverse --remove tcp:%%P >nul 2>&1
+    "%ADB_EXE%" reverse tcp:%%P tcp:%%P
+)
+
+"%ADB_EXE%" reverse --list > "%RUN_DIR%\adb_reverse_before.txt" 2>&1
+
+rem ---------- Capture environment BEFORE test ----------
+echo [5/10] Capturing environment metadata...
+(
+    echo RUN_ID=%RUN_ID%
+    echo DATE_TIME=%DATE% %TIME%
+    echo ROOT=%TRUTHAN_ROOT%
+    echo SERVER=%TRUTHAN_SERVER%
+    echo PACKAGE=%TRUTHAN_PACKAGE%
+    echo PYTHON=%PY_EXE%
+    echo ADB=%ADB_EXE%
+    echo.
+    echo ===== TRUTHAN ENV VARS =====
+    set TRUTHAN_
+) > "%RUN_DIR%\run_info.txt"
+
+"%ADB_EXE%" shell getprop ro.product.manufacturer > "%RUN_DIR%\device_info.txt" 2>&1
+"%ADB_EXE%" shell getprop ro.product.model >> "%RUN_DIR%\device_info.txt" 2>&1
+"%ADB_EXE%" shell getprop ro.build.version.release >> "%RUN_DIR%\device_info.txt" 2>&1
+"%ADB_EXE%" shell getprop ro.build.version.sdk >> "%RUN_DIR%\device_info.txt" 2>&1
+"%ADB_EXE%" shell wm size >> "%RUN_DIR%\device_info.txt" 2>&1
+"%ADB_EXE%" shell wm density >> "%RUN_DIR%\device_info.txt" 2>&1
+
+"%ADB_EXE%" shell dumpsys package "%TRUTHAN_PACKAGE%" ^
+    | findstr /i "versionName versionCode firstInstallTime lastUpdateTime" ^
+    > "%RUN_DIR%\apk_version.txt" 2>&1
+
+rem ---------- Git snapshot ----------
+if defined GIT_EXE (
+    pushd "%TRUTHAN_ROOT%"
+    "%GIT_EXE%" rev-parse --short HEAD > "%RUN_DIR%\git_head.txt" 2>&1
+    "%GIT_EXE%" status --short > "%RUN_DIR%\git_status.txt" 2>&1
+    "%GIT_EXE%" log -8 --oneline --decorate > "%RUN_DIR%\git_log.txt" 2>&1
+    "%GIT_EXE%" diff --no-ext-diff > "%RUN_DIR%\git_diff.patch" 2>&1
+    "%GIT_EXE%" diff --cached --no-ext-diff > "%RUN_DIR%\git_diff_cached.patch" 2>&1
+    popd
+)
+
+copy /y "%TRUTHAN_SERVER%" "%RUN_DIR%\server_snapshot.py" >nul 2>&1
+copy /y "%~f0" "%RUN_DIR%\test_capture_snapshot.bat" >nul 2>&1
+if exist "%ROOT%02_test_npc_probe.bat" copy /y "%ROOT%02_test_npc_probe.bat" "%RUN_DIR%\npc_probe_launcher_snapshot.bat" >nul 2>&1
+if exist "%TRUTHAN_ROOT%\PROJECT_STATE.md" copy /y "%TRUTHAN_ROOT%\PROJECT_STATE.md" "%RUN_DIR%\PROJECT_STATE.md" >nul 2>&1
+if exist "%TRUTHAN_ROOT%\AI_RULES.md" copy /y "%TRUTHAN_ROOT%\AI_RULES.md" "%RUN_DIR%\AI_RULES.md" >nul 2>&1
+
+rem ---------- Start server ----------
+echo [6/10] Starting server...
+set "SERVER_CONSOLE=%RUN_DIR%\server_console.log"
+
+start TRUTHAN_SERVER %PY_EXE% -u %TRUTHAN_SERVER% > %SERVER_CONSOLE% 2>&1
+ "$Host.UI.RawUI.WindowTitle='TRUTHAN_SERVER'; Set-Location -LiteralPath '%TRUTHAN_SERVER_DIR%'; & '%PY_EXE%' -u '%TRUTHAN_SERVER%' 2>&1 | Tee-Object -FilePath '%SERVER_CONSOLE%'"
+
+timeout /t 2 /nobreak >nul
+
+rem ---------- Launch game ----------
+echo [7/10] Launching game...
+"%ADB_EXE%" shell monkey -p "%TRUTHAN_PACKAGE%" -c android.intent.category.LAUNCHER 1 > "%RUN_DIR%\launch_game.txt" 2>&1
+
+echo.
+echo ============================================================
+echo TEST NOW.
+echo.
+echo Do the exact action that reproduces the bug.
+echo Examples:
+echo   - enter map
+echo   - move
+echo   - select NPC
+echo   - press attack
+echo   - wait for crash/freeze
+echo.
+echo IMPORTANT:
+echo When you are DONE testing, return to this window and press ENTER.
+echo ============================================================
+echo.
+pause >nul
+
+rem ---------- Capture end state ----------
+echo.
+echo [8/10] Capturing end-state evidence...
+
+"%ADB_EXE%" shell pidof "%TRUTHAN_PACKAGE%" > "%RUN_DIR%\app_pid.txt" 2>&1
+
+rem Screen at the moment the user ended the test.
+"%ADB_EXE%" exec-out screencap -p > "%RUN_DIR%\screen_end.png" 2>nul
+
+rem Full logcat since we cleared it immediately before this run.
+"%ADB_EXE%" logcat -d -v threadtime > "%RUN_DIR%\logcat_full.txt" 2>&1
+
+rem Focused log for quick inspection. Full log remains authoritative.
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "$p='%RUN_DIR%\logcat_full.txt'; if(Test-Path -LiteralPath $p){ Get-Content -LiteralPath $p | Select-String -Pattern 'com\.t4game|AndroidRuntime|FATAL EXCEPTION|Exception|Error|GSprite|GUser|GameWorld|J2AB|ArithmeticException|NullPointerException|ArrayIndexOutOfBoundsException' -CaseSensitive:$false | Set-Content -LiteralPath '%RUN_DIR%\logcat_focus.txt' -Encoding UTF8 }"
+
+"%ADB_EXE%" reverse --list > "%RUN_DIR%\adb_reverse_after.txt" 2>&1
+"%ADB_EXE%" shell dumpsys meminfo "%TRUTHAN_PACKAGE%" > "%RUN_DIR%\meminfo.txt" 2>&1
+
+rem Ask for one human observation; this is often critical for correlating packets.
+set "TEST_NOTE="
+set /p "TEST_NOTE=Describe what you saw in one line (optional): "
+(
+    echo %TEST_NOTE%
+) > "%RUN_DIR%\USER_OBSERVATION.txt"
+
+rem Stop only the server window created by this script.
+taskkill /FI "WINDOWTITLE eq TRUTHAN_SERVER" /T /F >nul 2>&1
+timeout /t 1 /nobreak >nul
+
+rem ---------- Copy packet logs ----------
+echo [9/10] Collecting server packet logs...
+mkdir "%RUN_DIR%\packet_logs" >nul 2>&1
+if exist "%TRUTHAN_PACKET_LOG_DIR%\*" (
+    copy /y "%TRUTHAN_PACKET_LOG_DIR%\*" "%RUN_DIR%\packet_logs\" >nul 2>&1
+)
+
+rem Add directory listing so missing/empty captures are obvious.
+(
+    echo ===== DEBUG RUN =====
+    dir /s /b "%RUN_DIR%"
+    echo.
+    echo ===== PACKET LOG SOURCE =====
+    dir /s /b "%TRUTHAN_PACKET_LOG_DIR%" 2^>nul
+) > "%RUN_DIR%\manifest.txt"
+
+rem ---------- Build one uploadable ZIP ----------
+echo [10/10] Creating debug bundle...
+if exist "%BUNDLE%" del /q "%BUNDLE%" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+ "Compress-Archive -Path '%RUN_DIR%\*' -DestinationPath '%BUNDLE%' -CompressionLevel Optimal -Force"
+
+echo.
+echo ============================================================
+echo DONE
+echo ============================================================
+echo Debug folder:
+echo   %RUN_DIR%
+echo.
+echo Upload THIS ONE ZIP for analysis:
+echo   %BUNDLE%
+echo.
+echo It contains:
+echo   - full Android logcat
+echo   - focused error log
+echo   - auth/game packet logs
+echo   - server console
+echo   - end screenshot
+echo   - exact server source snapshot
+echo   - adb reverse state
+echo   - Android/APK/device info
+echo   - git commit/status/diff
+echo   - your observation
+echo ============================================================
+echo.
+pause
+
+endlocal

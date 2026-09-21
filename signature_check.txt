@@ -1,0 +1,22 @@
+adb devices
+OUTPUT:
+List of devices attached
+emulator-5554	device
+
+adb shell pm path com.t4game
+OUTPUT:
+package:/data/app/~~hZI-JuyhBDKi-dmh605b3A==/com.t4game-ZK3w8RV_ECbEMZB1CP6CGA==/base.apk
+
+adb pull /data/app/~~hZI-JuyhBDKi-dmh605b3A==/com.t4game-ZK3w8RV_ECbEMZB1CP6CGA==/base.apk build\\research\\installed_com.t4game.apk
+OUTPUT:
+/data/app/~~hZI-JuyhBDKi-dmh605b3A==/com.t4game-ZK3w8RV_ECbEMZB1CP6CGA==/base.apk: 1 file pulled, 0 skipped. 99.1 MB/s (11245564 bytes in 0.108s)
+
+C:\\Users\\Mech\\AppData\\Local\\Android\\Sdk\\build-tools\\37.0.0\\apksigner.bat verify --print-certs build\\research\\installed_com.t4game.apk
+OUTPUT:
+DOES NOT VERIFY
+ERROR: JAR signer TRUTHAN.RSA: JAR signature META-INF/TRUTHAN.RSA uses digest algorithm SHA-256 and signature algorithm SHA-256 with RSA which is not supported on API Level(s) 9-17 for which this APK is being verified
+
+C:\\Users\\Mech\\AppData\\Local\\Android\\Sdk\\build-tools\\37.0.0\\apksigner.bat verify --print-certs server\\truthan_resources_v1.17.apk
+OUTPUT:
+DOES NOT VERIFY
+ERROR: JAR signer TRUTHAN.RSA: JAR signature META-INF/TRUTHAN.RSA uses digest algorithm SHA-256 and signature algorithm SHA-256 with RSA which is not supported on API Level(s) 9-17 for which this APK is being verified

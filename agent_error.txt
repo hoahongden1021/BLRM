@@ -1,0 +1,9 @@
+Command: cmd /c "C:\\Users\\Mech\\AppData\\Local\\Android\\Sdk\\build-tools\\37.0.0\\apksigner.bat verify --print-certs build\\research\\truthan_uihook_poc-unsigned.apk"
+
+STDOUT:
+DOES NOT VERIFY
+ERROR: Missing META-INF/MANIFEST.MF
+
+STDERR:
+
+Exit Code: 0

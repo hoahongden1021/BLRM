@@ -1,0 +1,8 @@
+version: 3.0.3
+apkFileName: truthan_resources_v1.17.apk
+sdkInfo:
+  minSdkVersion: 23
+doNotCompress:
+- arsc
+- mid
+- png

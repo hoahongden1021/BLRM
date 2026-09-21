@@ -1,0 +1,852 @@
+# GameWorld.smali:43939
+.method private processNpcFunctionListMessage()V
+    .locals 12
+
+    const/4 v11, -0x4
+
+    const/16 v10, -0x64
+
+    const/4 v9, 0x2
+
+    const/4 v8, 0x1
+
+    const/4 v7, 0x0
+
+    sget-byte v0, Lcom/t4game/GameWorld;->LOADINGBACK:B
+
+    invoke-virtual {p0, v0}, Lcom/t4game/GameWorld;->setLoadingState(B)V
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->npcFunctionList:Ljava/util/Vector;
+
+    invoke-virtual {v0}, Ljava/util/Vector;->removeAllElements()V
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v0}, Lcom/t4game/IoBuffer;->getString()Ljava/lang/String;
+
+    move-result-object v0
+
+    invoke-direct {p0, v0}, Lcom/t4game/GameWorld;->repleaseName(Ljava/lang/String;)Ljava/lang/String;
+
+    move-result-object v1
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->scene:Lcom/t4game/GScene;
+
+    iget-object v0, v0, Lcom/t4game/GScene;->npcs:Ljava/util/Hashtable;
+
+    iget-object v2, p0, Lcom/t4game/GameWorld;->scene:Lcom/t4game/GScene;
+
+    iget v2, v2, Lcom/t4game/GScene;->choicedSpriteId:I
+
+    invoke-static {v2}, Ljava/lang/String;->valueOf(I)Ljava/lang/String;
+
+    move-result-object v2
+
+    invoke-virtual {v0, v2}, Ljava/util/Hashtable;->get(Ljava/lang/Object;)Ljava/lang/Object;
+
+    move-result-object v0
+
+    check-cast v0, Lcom/t4game/GNPC;
+
+    if-eqz v0, :cond_3
+
+    new-array v2, v9, [Ljava/lang/String;
+
+    iput-object v2, p0, Lcom/t4game/GameWorld;->npcFunctionMenu:[Ljava/lang/String;
+
+    iget-object v2, p0, Lcom/t4game/GameWorld;->npcFunctionMenu:[Ljava/lang/String;
+
+    iget-object v0, v0, Lcom/t4game/GNPC;->name:Ljava/lang/String;
+
+    aput-object v0, v2, v7
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->npcFunctionMenu:[Ljava/lang/String;
+
+    aput-object v1, v0, v8
+
+    :goto_0
+    move v0, v7
+
+    move v1, v7
+
+    :goto_1
+    const/4 v2, 0x4
+
+    if-ge v0, v2, :cond_8
+
+    iget-object v2, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v2}, Lcom/t4game/IoBuffer;->getByte()B
+
+    move-result v2
+
+    add-int/2addr v1, v2
+
+    if-lez v2, :cond_7
+
+    move v3, v7
+
+    :goto_2
+    if-ge v3, v2, :cond_7
+
+    new-instance v4, Lcom/t4game/NpcQuest;
+
+    invoke-direct {v4}, Lcom/t4game/NpcQuest;-><init>()V
+
+    if-nez v0, :cond_4
+
+    iput-short v11, v4, Lcom/t4game/NpcQuest;->flag:S
+
+    :cond_0
+    :goto_3
+    iget-object v5, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v5}, Lcom/t4game/IoBuffer;->getByte()B
+
+    move-result v5
+
+    iput-byte v5, v4, Lcom/t4game/NpcQuest;->titleColor:B
+
+    iget-object v5, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v5}, Lcom/t4game/IoBuffer;->getInt()I
+
+    move-result v5
+
+    iput v5, v4, Lcom/t4game/NpcQuest;->id:I
+
+    iget-object v5, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v5}, Lcom/t4game/IoBuffer;->getString()Ljava/lang/String;
+
+    move-result-object v5
+
+    iput-object v5, v4, Lcom/t4game/NpcQuest;->name:Ljava/lang/String;
+
+    const/4 v5, 0x3
+
+    if-eq v0, v5, :cond_1
+
+    if-eqz v0, :cond_1
+
+    if-ne v0, v9, :cond_2
+
+    :cond_1
+    iget-object v5, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v5}, Lcom/t4game/IoBuffer;->getByte()B
+
+    move-result v5
+
+    iput-byte v5, v4, Lcom/t4game/NpcQuest;->ZhuXian:B
+
+    iget-byte v5, v4, Lcom/t4game/NpcQuest;->ZhuXian:B
+
+    if-nez v5, :cond_2
+
+    new-instance v5, Ljava/lang/StringBuilder;
+
+    invoke-direct {v5}, Ljava/lang/StringBuilder;-><init>()V
+
+    iget-object v6, v4, Lcom/t4game/NpcQuest;->name:Ljava/lang/String;
+
+    invoke-virtual {v5, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v5
+
+    const-string v6, "["
+
+    invoke-virtual {v5, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v5
+
+    sget-object v6, Lcom/t4game/QuestConstants;->QUEST_ITEM_NAMES:[Ljava/lang/String;
+
+    aget-object v6, v6, v7
+
+    invoke-virtual {v5, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v5
+
+    const-string v6, "]"
+
+    invoke-virtual {v5, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v5
+
+    invoke-virtual {v5}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object v5
+
+    iput-object v5, v4, Lcom/t4game/NpcQuest;->name:Ljava/lang/String;
+
+    :cond_2
+    iget-object v5, p0, Lcom/t4game/GameWorld;->npcFunctionList:Ljava/util/Vector;
+
+    invoke-virtual {v5, v4}, Ljava/util/Vector;->addElement(Ljava/lang/Object;)V
+
+    add-int/lit8 v3, v3, 0x1
+
+    int-to-byte v3, v3
+
+    goto :goto_2
+
+    :cond_3
+    new-array v0, v9, [Ljava/lang/String;
+
+    iput-object v0, p0, Lcom/t4game/GameWorld;->npcFunctionMenu:[Ljava/lang/String;
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->npcFunctionMenu:[Ljava/lang/String;
+
+    const-string v2, ""
+
+    aput-object v2, v0, v7
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->npcFunctionMenu:[Ljava/lang/String;
+
+    aput-object v1, v0, v8
+
+    goto/16 :goto_0
+
+    :cond_4
+    if-ne v0, v8, :cond_5
+
+    iput-short v10, v4, Lcom/t4game/NpcQuest;->flag:S
+
+    goto :goto_3
+
+    :cond_5
+    if-ne v0, v9, :cond_6
+
+    const/4 v5, -0x2
+
+    iput-short v5, v4, Lcom/t4game/NpcQuest;->flag:S
+
+    goto :goto_3
+
+    :cond_6
+    const/4 v5, 0x3
+
+    if-ne v0, v5, :cond_0
+
+    const/4 v5, -0x1
+
+    iput-short v5, v4, Lcom/t4game/NpcQuest;->flag:S
+
+    goto :goto_3
+
+    :cond_7
+    add-int/lit8 v0, v0, 0x1
+
+    int-to-byte v0, v0
+
+    goto/16 :goto_1
+
+    :cond_8
+    iget-object v0, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v0}, Lcom/t4game/IoBuffer;->getByte()B
+
+    move-result v0
+
+    move v2, v7
+
+    move v3, v7
+
+    :goto_4
+    if-ge v3, v0, :cond_b
+
+    new-instance v4, Lcom/t4game/NpcQuest;
+
+    invoke-direct {v4}, Lcom/t4game/NpcQuest;-><init>()V
+
+    iget-object v5, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v5}, Lcom/t4game/IoBuffer;->getByte()B
+
+    move-result v5
+
+    iput-byte v5, v4, Lcom/t4game/NpcQuest;->flagId:B
+
+    iget-object v5, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v5}, Lcom/t4game/IoBuffer;->getShort()S
+
+    move-result v5
+
+    iput-short v5, v4, Lcom/t4game/NpcQuest;->flag:S
+
+    iget-object v5, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v5}, Lcom/t4game/IoBuffer;->getString()Ljava/lang/String;
+
+    move-result-object v5
+
+    iput-object v5, v4, Lcom/t4game/NpcQuest;->name:Ljava/lang/String;
+
+    iget-object v5, v4, Lcom/t4game/NpcQuest;->name:Ljava/lang/String;
+
+    const-string v6, ""
+
+    invoke-virtual {v5, v6}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+
+    move-result v5
+
+    if-eqz v5, :cond_9
+
+    sget-object v5, Lcom/t4game/CommonConstants;->NPC_FUNCTION_NAMES:[Ljava/lang/String;
+
+    iget-short v6, v4, Lcom/t4game/NpcQuest;->flag:S
+
+    aget-object v5, v5, v6
+
+    iput-object v5, v4, Lcom/t4game/NpcQuest;->name:Ljava/lang/String;
+
+    :cond_9
+    iget-short v5, v4, Lcom/t4game/NpcQuest;->flag:S
+
+    const/4 v6, -0x1
+
+    if-eq v5, v6, :cond_a
+
+    iget-object v5, p0, Lcom/t4game/GameWorld;->npcFunctionList:Ljava/util/Vector;
+
+    invoke-virtual {v5, v4}, Ljava/util/Vector;->addElement(Ljava/lang/Object;)V
+
+    add-int/lit8 v2, v2, 0x1
+
+    int-to-byte v2, v2
+
+    :cond_a
+    add-int/lit8 v3, v3, 0x1
+
+    int-to-byte v3, v3
+
+    goto :goto_4
+
+    :cond_b
+    iget-object v0, p0, Lcom/t4game/GameWorld;->npcFunctionList:Ljava/util/Vector;
+
+    invoke-virtual {v0}, Ljava/util/Vector;->size()I
+
+    move-result v0
+
+    if-lez v0, :cond_c
+
+    new-instance v0, Lcom/t4game/NpcQuest;
+
+    invoke-direct {v0}, Lcom/t4game/NpcQuest;-><init>()V
+
+    const/16 v3, 0x3d
+
+    iput-short v3, v0, Lcom/t4game/NpcQuest;->flag:S
+
+    const-string v3, "\u8fd4\u56de"
+
+    iput-object v3, v0, Lcom/t4game/NpcQuest;->name:Ljava/lang/String;
+
+    iget-object v3, p0, Lcom/t4game/GameWorld;->npcFunctionList:Ljava/util/Vector;
+
+    invoke-virtual {v3, v0}, Ljava/util/Vector;->addElement(Ljava/lang/Object;)V
+
+    :cond_c
+    if-ne v1, v8, :cond_13
+
+    if-nez v2, :cond_13
+
+    iget-boolean v0, p0, Lcom/t4game/GameWorld;->NpcMissionComeInFromList:Z
+
+    if-eqz v0, :cond_13
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->npcFunctionList:Ljava/util/Vector;
+
+    invoke-virtual {v0, v7}, Ljava/util/Vector;->elementAt(I)Ljava/lang/Object;
+
+    move-result-object v0
+
+    check-cast v0, Lcom/t4game/NpcQuest;
+
+    iget-short v3, v0, Lcom/t4game/NpcQuest;->flag:S
+
+    if-ne v3, v10, :cond_f
+
+    iget v3, p0, Lcom/t4game/GameWorld;->choicedFunctionNPCId:I
+
+    iget v0, v0, Lcom/t4game/NpcQuest;->id:I
+
+    invoke-virtual {p0, v3, v0}, Lcom/t4game/GameWorld;->sendNpcTalkDetailMessage(II)Z
+
+    iput-byte v7, p0, Lcom/t4game/GameWorld;->selectMissionPosInList:B
+
+    :cond_d
+    :goto_5
+    add-int v0, v1, v2
+
+    :cond_e
+    return-void
+
+    :cond_f
+    iget-short v3, v0, Lcom/t4game/NpcQuest;->flag:S
+
+    const/4 v4, -0x3
+
+    if-eq v3, v4, :cond_10
+
+    iget-short v3, v0, Lcom/t4game/NpcQuest;->flag:S
+
+    if-ne v3, v11, :cond_12
+
+    :cond_10
+    iget-object v3, p0, Lcom/t4game/GameWorld;->screen:Lcom/t4game/GameScreen;
+
+    iget-object v3, v3, Lcom/t4game/GameScreen;->tiantian:Lcom/t4game/TianTian;
+
+    if-eqz v3, :cond_11
+
+    iget-object v3, p0, Lcom/t4game/GameWorld;->screen:Lcom/t4game/GameScreen;
+
+    iget-object v3, v3, Lcom/t4game/GameScreen;->tiantian:Lcom/t4game/TianTian;
+
+    invoke-virtual {v3}, Lcom/t4game/TianTian;->start()Z
+
+    move-result v3
+
+    if-nez v3, :cond_e
+
+    :cond_11
+    iget v3, p0, Lcom/t4game/GameWorld;->choicedFunctionNPCId:I
+
+    iget v4, v0, Lcom/t4game/NpcQuest;->id:I
+
+    invoke-virtual {p0, v3, v4}, Lcom/t4game/GameWorld;->sendGetNpcMissionDesMessage(II)Z
+
+    iget v0, v0, Lcom/t4game/NpcQuest;->id:I
+
+    iput v0, p0, Lcom/t4game/GameWorld;->selectMissionId:I
+
+    iput-byte v7, p0, Lcom/t4game/GameWorld;->selectMissionPosInList:B
+
+    goto :goto_5
+
+    :cond_12
+    const/16 v0, 0x11
+
+    invoke-virtual {p0, v0}, Lcom/t4game/GameWorld;->setState(B)V
+
+    goto :goto_5
+
+    :cond_13
+    if-gtz v1, :cond_14
+
+    if-lez v2, :cond_15
+
+    :cond_14
+    const/16 v0, 0x11
+
+    invoke-virtual {p0, v0}, Lcom/t4game/GameWorld;->setState(B)V
+
+    goto :goto_5
+
+    :cond_15
+    iget-object v0, p0, Lcom/t4game/GameWorld;->screen:Lcom/t4game/GameScreen;
+
+    iget-byte v0, v0, Lcom/t4game/GameScreen;->State:B
+
+    const/16 v3, 0x1e
+
+    if-ne v0, v3, :cond_16
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->screen:Lcom/t4game/GameScreen;
+
+    iget-byte v0, v0, Lcom/t4game/GameScreen;->dialogId:B
+
+    if-eqz v0, :cond_d
+
+    :cond_16
+    const/16 v0, 0xa
+
+    invoke-virtual {p0, v0}, Lcom/t4game/GameWorld;->setState(B)V
+
+    goto :goto_5
+.end method
+
+# GameWorld.smali:44833
+.method private processNpcFunctionTalkMessage()V
+    .locals 6
+
+    const/4 v5, 0x0
+
+    sget-byte v0, Lcom/t4game/GameWorld;->LOADINGBACK:B
+
+    invoke-virtual {p0, v0}, Lcom/t4game/GameWorld;->setLoadingState(B)V
+
+    const/4 v0, 0x0
+
+    check-cast v0, [[Ljava/lang/String;
+
+    iput-object v0, p0, Lcom/t4game/GameWorld;->npcTalk:[[Ljava/lang/String;
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v0}, Lcom/t4game/IoBuffer;->getByte()B
+
+    move-result v0
+
+    if-nez v0, :cond_0
+
+    sget-byte v0, Lcom/t4game/GameWorld;->BackStateSucess:B
+
+    iput-byte v0, p0, Lcom/t4game/GameWorld;->loadBackState:B
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v0}, Lcom/t4game/IoBuffer;->getByte()B
+
+    move-result v1
+
+    if-lez v1, :cond_1
+
+    const/4 v0, 0x2
+
+    filled-new-array {v1, v0}, [I
+
+    move-result-object v0
+
+    const-class v2, Ljava/lang/String;
+
+    invoke-static {v2, v0}, Ljava/lang/reflect/Array;->newInstance(Ljava/lang/Class;[I)Ljava/lang/Object;
+
+    move-result-object v0
+
+    check-cast v0, [[Ljava/lang/String;
+
+    iput-object v0, p0, Lcom/t4game/GameWorld;->npcTalk:[[Ljava/lang/String;
+
+    move v0, v5
+
+    :goto_0
+    if-ge v0, v1, :cond_1
+
+    iget-object v2, p0, Lcom/t4game/GameWorld;->npcTalk:[[Ljava/lang/String;
+
+    aget-object v2, v2, v0
+
+    iget-object v3, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v3}, Lcom/t4game/IoBuffer;->getString()Ljava/lang/String;
+
+    move-result-object v3
+
+    aput-object v3, v2, v5
+
+    iget-object v2, p0, Lcom/t4game/GameWorld;->npcTalk:[[Ljava/lang/String;
+
+    aget-object v2, v2, v0
+
+    const/4 v3, 0x1
+
+    iget-object v4, p0, Lcom/t4game/GameWorld;->readBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v4}, Lcom/t4game/IoBuffer;->getString()Ljava/lang/String;
+
+    move-result-object v4
+
+    aput-object v4, v2, v3
+
+    add-int/lit8 v0, v0, 0x1
+
+    int-to-byte v0, v0
+
+    goto :goto_0
+
+    :cond_0
+    sget-byte v0, Lcom/t4game/GameWorld;->BackStateErr:B
+
+    iput-byte v0, p0, Lcom/t4game/GameWorld;->loadBackState:B
+
+    :cond_1
+    return-void
+.end method
+
+# GameWorld.smali:101253
+.method public sendGetNpcMissionListMessage(I)Z
+    .locals 3
+
+    const/4 v2, 0x0
+
+    invoke-virtual {p0, v2}, Lcom/t4game/GameWorld;->setServerControl(Z)V
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->user:Lcom/t4game/GUser;
+
+    invoke-virtual {v0, v2}, Lcom/t4game/GUser;->setActType(B)V
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->user:Lcom/t4game/GUser;
+
+    iget-object v1, p0, Lcom/t4game/GameWorld;->user:Lcom/t4game/GUser;
+
+    iget-byte v1, v1, Lcom/t4game/GUser;->dir:B
+
+    invoke-virtual {v0, v2, v1}, Lcom/t4game/GUser;->setAction(BB)V
+
+    sget-byte v0, Lcom/t4game/GameWorld;->ONLOADING:B
+
+    invoke-virtual {p0, v0}, Lcom/t4game/GameWorld;->setLoadingState(B)V
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->sendBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v0}, Lcom/t4game/IoBuffer;->clearSend()V
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->sendBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v0, p1}, Lcom/t4game/IoBuffer;->putInt(I)V
+
+    iput p1, p0, Lcom/t4game/GameWorld;->choicedFunctionNPCId:I
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->network:Lcom/t4game/TcpNetwork;
+
+    const/16 v1, 0x78
+
+    iget-object v2, p0, Lcom/t4game/GameWorld;->sendBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v2}, Lcom/t4game/IoBuffer;->toBuffer()[B
+
+    move-result-object v2
+
+    invoke-virtual {v0, v1, v2}, Lcom/t4game/TcpNetwork;->SendData(I[B)Z
+
+    move-result v0
+
+    return v0
+.end method
+
+# GameWorld.smali:104931
+.method public sendNpcFunctionTalkMessage()Z
+    .locals 3
+
+    sget-byte v0, Lcom/t4game/GameWorld;->ONLOADING:B
+
+    invoke-virtual {p0, v0}, Lcom/t4game/GameWorld;->setLoadingState(B)V
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->sendBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v0}, Lcom/t4game/IoBuffer;->clearSend()V
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->sendBuffer:Lcom/t4game/IoBuffer;
+
+    iget v1, p0, Lcom/t4game/GameWorld;->choicedFunctionNPCId:I
+
+    invoke-virtual {v0, v1}, Lcom/t4game/IoBuffer;->putInt(I)V
+
+    iget-object v0, p0, Lcom/t4game/GameWorld;->network:Lcom/t4game/TcpNetwork;
+
+    const/16 v1, 0x49
+
+    iget-object v2, p0, Lcom/t4game/GameWorld;->sendBuffer:Lcom/t4game/IoBuffer;
+
+    invoke-virtual {v2}, Lcom/t4game/IoBuffer;->toBuffer()[B
+
+    move-result-object v2
+
+    invoke-virtual {v0, v1, v2}, Lcom/t4game/TcpNetwork;->SendData(I[B)Z
+
+    move-result v0
+
+    return v0
+.end method
+
+# GNPC.smali:552
+.method public getName()Ljava/lang/String;
+    .locals 8
+
+    const-string v6, "]"
+
+    const-string v5, "["
+
+    iget-object v0, p0, Lcom/t4game/GNPC;->name:Ljava/lang/String;
+
+    iget-object v1, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    if-eqz v1, :cond_3
+
+    const/4 v1, 0x0
+
+    move v7, v1
+
+    move-object v1, v0
+
+    move v0, v7
+
+    :goto_0
+    iget-object v2, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    array-length v2, v2
+
+    if-ge v0, v2, :cond_2
+
+    iget-object v2, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    aget-byte v2, v2, v0
+
+    const/4 v3, 0x5
+
+    if-le v2, v3, :cond_0
+
+    iget-boolean v2, p0, Lcom/t4game/GNPC;->isTheTargetNpc:Z
+
+    if-eqz v2, :cond_1
+
+    new-instance v2, Ljava/lang/StringBuilder;
+
+    invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V
+
+    const-string v3, "["
+
+    invoke-virtual {v2, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v2
+
+    sget-object v3, Lcom/t4game/CommonConstants;->NPC_FLAG_NAMES:[Ljava/lang/String;
+
+    iget-object v4, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    aget-byte v4, v4, v0
+
+    aget-object v3, v3, v4
+
+    invoke-virtual {v2, v3}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v2
+
+    const-string v3, "]"
+
+    invoke-virtual {v2, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v2
+
+    invoke-virtual {v2, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v1
+
+    invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object v1
+
+    :cond_0
+    :goto_1
+    add-int/lit8 v0, v0, 0x1
+
+    int-to-byte v0, v0
+
+    goto :goto_0
+
+    :cond_1
+    new-instance v2, Ljava/lang/StringBuilder;
+
+    invoke-direct {v2}, Ljava/lang/StringBuilder;-><init>()V
+
+    invoke-virtual {v2, v1}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v1
+
+    const-string v2, "["
+
+    invoke-virtual {v1, v5}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v1
+
+    sget-object v2, Lcom/t4game/CommonConstants;->NPC_FLAG_NAMES:[Ljava/lang/String;
+
+    iget-object v3, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    aget-byte v3, v3, v0
+
+    aget-object v2, v2, v3
+
+    invoke-virtual {v1, v2}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v1
+
+    const-string v2, "]"
+
+    invoke-virtual {v1, v6}, Ljava/lang/StringBuilder;->append(Ljava/lang/String;)Ljava/lang/StringBuilder;
+
+    move-result-object v1
+
+    invoke-virtual {v1}, Ljava/lang/StringBuilder;->toString()Ljava/lang/String;
+
+    move-result-object v1
+
+    goto :goto_1
+
+    :cond_2
+    move-object v0, v1
+
+    :cond_3
+    return-object v0
+.end method
+
+# GNPC.smali:884
+.method public setFlag([B)V
+    .locals 4
+
+    const/4 v3, 0x1
+
+    const/4 v2, 0x0
+
+    iput-object p1, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    const/4 v0, 0x0
+
+    iput-object v0, p0, Lcom/t4game/GNPC;->iconList:[B
+
+    iget-object v0, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    if-eqz v0, :cond_0
+
+    iget-object v0, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    aget-byte v0, v0, v2
+
+    const/4 v1, 0x4
+
+    if-gt v0, v1, :cond_1
+
+    new-array v0, v3, [B
+
+    iput-object v0, p0, Lcom/t4game/GNPC;->iconList:[B
+
+    iget-object v0, p0, Lcom/t4game/GNPC;->iconList:[B
+
+    iget-object v1, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    aget-byte v1, v1, v2
+
+    aput-byte v1, v0, v2
+
+    :cond_0
+    :goto_0
+    iget-object v0, p0, Lcom/t4game/GNPC;->iconList:[B
+
+    if-eqz v0, :cond_2
+
+    iput-boolean v3, p0, Lcom/t4game/GNPC;->picOnTop:Z
+
+    iput-boolean v3, p0, Lcom/t4game/GNPC;->CanShowPop:Z
+
+    :goto_1
+    return-void
+
+    :cond_1
+    iget-object v0, p0, Lcom/t4game/GNPC;->Flag:[B
+
+    iput-object v0, p0, Lcom/t4game/GNPC;->iconList:[B
+
+    goto :goto_0
+
+    :cond_2
+    iput-boolean v2, p0, Lcom/t4game/GNPC;->picOnTop:Z
+
+    iput-boolean v2, p0, Lcom/t4game/GNPC;->CanShowPop:Z
+
+    goto :goto_1
+.end method

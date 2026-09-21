@@ -1,0 +1,7 @@
+
+# Local emulator/vision runtime artifacts
+.agent_screen.png
+.agent_vision.json
+.truthan_ui.xml
+.opencode_truthan_launch.png
+.opencode_screen_test.png
