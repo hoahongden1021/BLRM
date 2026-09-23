@@ -1,9 +1,91 @@
 #!/usr/bin/env python3
-import socket, threading, time, pathlib, struct, traceback, zipfile, os
+import socket, threading, time, pathlib, struct, traceback, zipfile, os, json, math
 
 PORTS = [1888, 8089, 19000, 2888, 29000]
 LOGDIR = pathlib.Path("truthan_packet_logs")
 LOGDIR.mkdir(exist_ok=True)
+
+# Lightweight machine-readable world state for the local AI/automation layer.
+# The file lives under truthan_packet_logs/ (already gitignored) and is derived
+# only from server-known scene state, cmd133 movement, and entities this server
+# actually sent with cmd132.  It is telemetry; it does not alter game protocol.
+STATE_PATH = pathlib.Path(
+    os.environ.get("TRUTHAN_STATE_FILE", str(LOGDIR / "runtime_state.json"))
+)
+STATE_LOCK = threading.Lock()
+
+
+def _runtime_npc_rows(visible_npcs):
+    px = int(ROLE.get("x", SPAWN_X))
+    py = int(ROLE.get("y", SPAWN_Y))
+    rows = []
+    for npc_id in sorted(visible_npcs):
+        ent = visible_npcs[npc_id]
+        x = int(ent.get("x", 0))
+        y = int(ent.get("y", 0))
+        row = {
+            "id": int(npc_id),
+            "name": str(ent.get("name", "")),
+            "x": x,
+            "y": y,
+            "dx": x - px,
+            "dy": y - py,
+            "distance": round(math.hypot(x - px, y - py), 3),
+            "can_select": bool(ent.get("can_select", 0)),
+            "can_hit": bool(ent.get("can_hit", 0)),
+            "source": "server_probe_cmd132",
+        }
+        if ent.get("object_data_id") is not None:
+            row["object_data_id"] = int(ent["object_data_id"])
+        rows.append(row)
+    return rows
+
+
+def write_runtime_state(visible_npcs=None, movement=None,
+                        last_npc_request=None, game_connected=False):
+    """Atomically publish the server-known local world state as JSON."""
+    visible_npcs = visible_npcs or {}
+    movement = movement or {}
+    state = {
+        "schema_version": 1,
+        "updated_unix_ms": int(time.time() * 1000),
+        "game_connected": bool(game_connected),
+        "scene": {
+            "id": int(current_scene_id()),
+            "name": current_scene_name(),
+        },
+        "player": {
+            "id": int(ROLE.get("id", 0)),
+            "name": str(ROLE.get("name", "")),
+            "x": int(ROLE.get("x", SPAWN_X)),
+            "y": int(ROLE.get("y", SPAWN_Y)),
+            "direction": movement.get("direction"),
+            "control": movement.get("control"),
+            "action_low": movement.get("action_low"),
+            "position_source": (
+                "cmd133" if movement else "server_scene_state"
+            ),
+        },
+        "npcs": _runtime_npc_rows(visible_npcs),
+        "last_npc_request": last_npc_request,
+        "evidence": {
+            "player_position": (
+                "decoded client cmd133" if movement
+                else "server scene-ready/current role state"
+            ),
+            "npc_rows": (
+                "only entities sent by this server with diagnostic/probe cmd132"
+            ),
+        },
+    }
+
+    STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = STATE_PATH.with_suffix(STATE_PATH.suffix + ".tmp")
+    payload = json.dumps(state, ensure_ascii=False, indent=2)
+    with STATE_LOCK:
+        tmp.write_text(payload, encoding="utf-8")
+        os.replace(tmp, STATE_PATH)
+    return state
 
 RESOURCE_APK = pathlib.Path(__file__).with_name("truthan_resources_v1.17.apk")
 
@@ -872,6 +954,15 @@ def handle(c, addr, port):
         c.settimeout(300)
         buf = bytearray()
         visible_npcs = {}
+        last_move = None
+        last_npc_request = None
+        if port == 19000:
+            write_runtime_state(
+                visible_npcs,
+                movement=last_move,
+                last_npc_request=last_npc_request,
+                game_connected=True,
+            )
 
         while True:
             try:
@@ -961,6 +1052,12 @@ def handle(c, addr, port):
                             # to divide by zero every frame.
                             time.sleep(0.15)
                             visible_npcs = send_starter_probe_entities(c, f, port, sid, sess)
+                            write_runtime_state(
+                                visible_npcs,
+                                movement=last_move,
+                                last_npc_request=last_npc_request,
+                                game_connected=True,
+                            )
 
                         elif cmd in (NPC_FUNCTION_LIST, NPC_FUNCTION_TALK):
                             # Restrict diagnostic dialogue to an entity spawned
@@ -983,6 +1080,18 @@ def handle(c, addr, port):
                                 ),)) if available else bytes([1])
                             send(c, f, port, cmd, reply, sid, sess,
                                  f"NPC cmd{cmd} -> id={npc_id} diagnostic={available}")
+                            last_npc_request = {
+                                "cmd": int(cmd),
+                                "npc_id": int(npc_id),
+                                "diagnostic_available": bool(available),
+                                "received_unix_ms": int(time.time() * 1000),
+                            }
+                            write_runtime_state(
+                                visible_npcs,
+                                movement=last_move,
+                                last_npc_request=last_npc_request,
+                                game_connected=True,
+                            )
 
                         elif cmd == ROLE_ENTER_SCENE_REQUEST:
                             send(
@@ -1032,11 +1141,18 @@ def handle(c, addr, port):
                             else:
                                 ROLE["x"] = mv["world_x"]
                                 ROLE["y"] = mv["world_y"]
+                                last_move = mv
                                 print(
                                     "MOVE cmd133 -> "
                                     f"world=({mv['world_x']},{mv['world_y']}) "
                                     f"dir={mv['direction']} ctl=0x{mv['control']:02x} "
                                     f"extra={mv['extra'].hex()}"
+                                )
+                                write_runtime_state(
+                                    visible_npcs,
+                                    movement=last_move,
+                                    last_npc_request=last_npc_request,
+                                    game_connected=True,
                                 )
                             # No echo for the local player.  The client updates its own
                             # position before sending this compact movement notification.
@@ -1053,6 +1169,13 @@ def handle(c, addr, port):
                 except Exception:
                     traceback.print_exc()
 
+        if port == 19000:
+            write_runtime_state(
+                visible_npcs,
+                movement=last_move,
+                last_npc_request=last_npc_request,
+                game_connected=False,
+            )
         print(f"CLOSED port={port} peer={addr}")
 
 def serve(p):
