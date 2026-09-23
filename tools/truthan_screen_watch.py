@@ -293,6 +293,12 @@ def _launch_scrcpy_server(
     _adb("forward", "--remove", f"tcp:{port}", check=False)
     _adb("forward", f"tcp:{port}", "localabstract:scrcpy")
 
+    # IMPORTANT:
+    # With adb forward, a host TCP connect may succeed before the device-side
+    # localabstract:scrcpy listener exists. scrcpy normally uses a one-byte
+    # dummy handshake specifically to detect that race. raw_stream=true would
+    # disable that byte, so configure the raw H.264 stream explicitly while
+    # keeping send_dummy_byte=true.
     cmd = [
         "adb",
         "shell",
@@ -302,12 +308,18 @@ def _launch_scrcpy_server(
         "com.genymobile.scrcpy.Server",
         version,
         "tunnel_forward=true",
+        "video=true",
+        "video_codec=h264",
         "audio=false",
         "control=false",
         "cleanup=false",
-        "raw_stream=true",
-        f"max_size={max_size}",
+        "send_device_meta=false",
+        "send_frame_meta=false",
+        "send_stream_meta=false",
+        "send_dummy_byte=true",
     ]
+    if max_size > 0:
+        cmd.append(f"max_size={max_size}")
 
     WATCH_DIR.mkdir(parents=True, exist_ok=True)
     log_fp = LOG_PATH.open("ab", buffering=0)
@@ -321,7 +333,7 @@ def _launch_scrcpy_server(
     finally:
         log_fp.close()
 
-    deadline = time.time() + 8.0
+    deadline = time.time() + 10.0
     last_error: Exception | None = None
     while time.time() < deadline:
         if proc.poll() is not None:
@@ -330,20 +342,34 @@ def _launch_scrcpy_server(
                 f"scrcpy server exited early with code {proc.returncode}; "
                 f"log_tail={tail!r}"
             )
+
+        sock: socket.socket | None = None
         try:
             sock = socket.create_connection(("127.0.0.1", port), timeout=0.8)
+            sock.settimeout(1.5)
+            dummy = sock.recv(1)
+            if len(dummy) != 1:
+                raise WatchError("scrcpy dummy handshake socket closed")
+            # The dummy byte is transport metadata, not H.264 payload.
             sock.settimeout(0.5)
             return proc, sock
-        except OSError as exc:
+        except (OSError, WatchError) as exc:
             last_error = exc
+            if sock is not None:
+                try:
+                    sock.close()
+                except OSError:
+                    pass
             time.sleep(0.15)
 
-    proc.terminate()
+    try:
+        proc.terminate()
+    except Exception:
+        pass
     raise WatchError(
-        f"could not connect to scrcpy raw stream: {last_error}; "
+        f"could not establish scrcpy video handshake: {last_error}; "
         f"log_tail={_log_tail()!r}"
     )
-
 
 def _frame_signature(frame: Any, stride: int = 24) -> Any:
     import numpy as np  # type: ignore
@@ -710,6 +736,10 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
     WATCH_DIR.mkdir(parents=True, exist_ok=True)
     STOP_PATH.unlink(missing_ok=True)
     try:
+        STATE_PATH.unlink(missing_ok=True)
+    except OSError:
+        pass
+    try:
         LOG_PATH.write_text("", encoding="utf-8")
     except OSError:
         pass
@@ -748,18 +778,21 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
 
     PID_PATH.write_text(str(proc.pid), encoding="ascii")
 
-    deadline = time.time() + 12.0
+    deadline = time.time() + 25.0
     last_status = None
     while time.time() < deadline:
         last_status = _read_json(STATUS_PATH)
         if last_status and last_status.get("pid") == proc.pid:
             if last_status.get("status") == "running":
-                return {
-                    "started": True,
-                    "pid": proc.pid,
-                    "replaced_previous": old,
-                    "status": last_status,
-                }
+                frames = int(last_status.get("frames_decoded") or 0)
+                state_exists = bool(last_status.get("screen_state_exists"))
+                if frames > 0 and state_exists:
+                    return {
+                        "started": True,
+                        "pid": proc.pid,
+                        "replaced_previous": old,
+                        "status": last_status,
+                    }
             if last_status.get("status") == "error":
                 raise WatchError(
                     "watcher failed to start: "
@@ -768,13 +801,14 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
                 )
         if proc.poll() is not None:
             raise WatchError(
-                f"watcher process exited early ({proc.returncode}); see {LOG_PATH}"
+                f"watcher process exited early ({proc.returncode}); "
+                f"log_tail={_log_tail()!r}"
             )
         time.sleep(0.2)
 
     raise WatchError(
-        "watcher did not reach running state in time; "
-        f"last_status={last_status}; see {LOG_PATH}"
+        "watcher did not decode a frame and publish screen_state in time; "
+        f"last_status={last_status}; log_tail={_log_tail()!r}"
     )
 
 
