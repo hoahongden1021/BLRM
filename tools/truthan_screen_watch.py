@@ -562,7 +562,9 @@ def _ocr_loop(
     from rapidocr import RapidOCR  # type: ignore
     from truthan_rapidocr import _extract, classify_screen
 
-    engine = RapidOCR()
+    # `max` prevents the detector from enlarging the resized frame back to
+    # its default 736-pixel minimum short side.
+    engine = RapidOCR(params={"Det.limit_type": "max"})
     min_interval = 1.0 / max(ocr_fps, 0.1)
     last_ocr_start = 0.0
     last_ocr_done = 0.0
