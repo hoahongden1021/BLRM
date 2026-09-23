@@ -55,6 +55,16 @@ Temporary Qwen3-VL use is allowed for one-time calibration. The long-term fast p
 
 The runtime-state file can prove that the game session reached the world, but it cannot by itself identify or operate pre-game UI screens.
 
+## Screenshot/runtime-file policy
+
+Agent screenshots must not clutter the repository root.
+
+- Runtime files live under `runtime/agent/` and are gitignored.
+- Internal captures used by `observe`, `locate`, `click`, and normalized tapping are transient and are deleted automatically after the consumer finishes.
+- The temporary device-side `/sdcard/__truthan_agent.png` transport file is deleted immediately after each pull.
+- Explicit `shot` is the exception: it is a deliberate retained capture and defaults to `runtime/agent/screenshots/manual.png`.
+- Old root-level `.agent_screen.png` / `.agent_vision.json` files from previous bridge versions are removed on the next fresh `launch`.
+
 ## Required state model
 
 Use these logical states only after corresponding runtime evidence is observed:
