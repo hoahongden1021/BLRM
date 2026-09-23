@@ -62,6 +62,14 @@ Temporary Qwen3-VL use is allowed for one-time calibration. The long-term fast p
   - fresh-launches server/client, OCRs, validates one exact target, taps once, OCRs again
   - writes `runtime/agent/reports/last_agent_result.json` and `last_agent_result.txt`
   - avoids ad-hoc temporary scripts and fragile multi-tool report writes
+- `tools/truthan_screen_watch.py` — **EXPERIMENTAL / NOT YET RUNTIME VERIFIED**
+  - uses the matching local scrcpy server in standalone `raw_stream=true` mode
+  - receives raw H.264 through an ADB forward and decodes frames in memory with PyAV
+  - keeps one RapidOCR engine alive instead of reloading it for every screenshot
+  - OCRs only when the sampled frame changes enough, plus a periodic idle refresh
+  - atomically updates `runtime/agent/screen_state.json`
+  - commands: `doctor`, `start`, `status`, `stop`
+  - requires `scrcpy` plus its matching `scrcpy-server` and Python package `av`
 
 The runtime-state file can prove that the game session reached the world, but it cannot by itself identify or operate pre-game UI screens.
 
@@ -74,6 +82,28 @@ Agent screenshots must not clutter the repository root.
 - The temporary device-side `/sdcard/__truthan_agent.png` transport file is deleted immediately after each pull.
 - Explicit `shot` is the exception: it is a deliberate retained capture and defaults to `runtime/agent/screenshots/manual.png`.
 - Old root-level `.agent_screen.png` / `.agent_vision.json` files from previous bridge versions are removed on the next fresh `launch`.
+
+## Experimental realtime screen watcher
+
+This is a CANDIDATE path until a real emulator test passes.
+
+The implementation follows scrcpy's documented standalone-server mode: the matching scrcpy server can expose a raw H.264 stream over an ADB forward when audio/control are disabled and `raw_stream=true`. The watcher decodes that stream directly in RAM; it does not screenshot the Windows scrcpy window.
+
+Expected test flow:
+
+```
+py tools\truthan_screen_watch.py doctor
+py tools\truthan_screen_watch.py start
+py tools\truthan_screen_watch.py status
+py tools\truthan_screen_watch.py stop
+```
+
+Do not replace the verified screenshot-based OCR bootstrap path with this watcher until:
+- `doctor` reports all prerequisites ready;
+- `start` reaches running state;
+- decoded frame count increases;
+- `runtime/agent/screen_state.json` receives meaningful Chinese OCR;
+- STOP cleans up the watcher without leaving a stale raw-stream server/forward.
 
 ## Verified OCR capability
 
