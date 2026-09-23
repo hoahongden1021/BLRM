@@ -24,7 +24,10 @@ STOP_PATH = WATCH_DIR / "stop.flag"
 LOG_PATH = WATCH_DIR / "watcher.log"
 
 DEFAULT_PORT = 27191
-DEFAULT_MAX_SIZE = 1920
+# Keep native stream coordinates by default so OCR boxes remain directly usable
+# for adb input tap. Downscaling can be added later only with explicit coordinate
+# remapping.
+DEFAULT_MAX_SIZE = 0
 REMOTE_SERVER = "/data/local/tmp/truthan-scrcpy-server.jar"
 PACKAGE = "com.t4game"
 
