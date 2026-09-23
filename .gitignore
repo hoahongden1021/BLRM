@@ -28,3 +28,7 @@ venv/
 
 # Ephemeral local-agent screenshots/state
 /runtime/agent/
+
+# Legacy root-level agent artifacts
+/.agent_screen.png
+/.agent_vision.json
