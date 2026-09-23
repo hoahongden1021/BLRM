@@ -66,6 +66,37 @@ def _watch_coordinates(
     return round(expected[0]), round(expected[1]), age
 
 
+def _wait_for_fresh_watch_state(
+    max_age: float, wait_seconds: float
+) -> tuple[dict[str, Any], float]:
+    from truthan_screen_watch import watcher_status
+
+    start = time.monotonic()
+    deadline = start + wait_seconds
+    # Leave time for foreground, text, and coordinate checks before the tap.
+    target_age = min(max_age, max(0.2, max_age - 0.75))
+    while True:
+        live = watcher_status()
+        if not live.get("running") or (live.get("status") or {}).get("status") != "running":
+            raise RuntimeError("screen watcher is not running")
+        data = live.get("screen_state")
+        if not isinstance(data, dict) or data.get("watcher_pid") != live.get("pid"):
+            raise RuntimeError("watcher screen_state does not belong to running watcher")
+
+        frame_ts = float(data.get("frame_timestamp_epoch") or 0)
+        age = time.time() - frame_ts
+        if frame_ts > 0 and 0 <= age <= target_age:
+            return data, time.monotonic() - start
+        if time.monotonic() >= deadline:
+            raise RuntimeError(
+                "watcher did not publish a fresh OCR frame in time: "
+                f"last_age={age:.3f}s max={max_age:.3f}s "
+                f"frame_id={data.get('frame_id')} "
+                f"frames_decoded={(live.get('status') or {}).get('frames_decoded')}"
+            )
+        time.sleep(0.2)
+
+
 def _wait_for_watch_transition(before: dict[str, Any], after_timeout: float) -> dict[str, Any]:
     from truthan_screen_watch import STATE_PATH, _read_json
 
@@ -102,6 +133,7 @@ def main() -> int:
     p.add_argument("--ocr", help=f"Screenshot OCR JSON (default: {DEFAULT_OCR}).")
     p.add_argument("--watch", action="store_true", help="Tap using fresh scrcpy watcher screen_state instead.")
     p.add_argument("--max-frame-age", type=float, default=2.5)
+    p.add_argument("--wait-fresh", type=float, default=12.0)
     p.add_argument("--after-timeout", type=float, default=12.0)
     p.add_argument("--min-score", type=float, default=0.95)
     p.add_argument("--require-state")
@@ -111,8 +143,8 @@ def main() -> int:
         p.error("--watch and --ocr cannot be used together")
     if args.watch and (not args.require_state or not args.require_substate):
         p.error("--watch requires --require-state and --require-substate")
-    if args.max_frame_age <= 0 or args.after_timeout < 0:
-        p.error("--max-frame-age must be positive and --after-timeout nonnegative")
+    if args.max_frame_age <= 0 or args.wait_fresh < 0 or args.after_timeout < 0:
+        p.error("--max-frame-age must be positive; wait timeouts must be nonnegative")
 
     from truthan_gui import current_focus, tap_px
 
@@ -124,14 +156,13 @@ def main() -> int:
         )
 
     if args.watch:
-        from truthan_screen_watch import watcher_status
-
-        live = watcher_status()
-        data = live.get("screen_state")
-        if not live.get("running") or (live.get("status") or {}).get("status") != "running":
-            raise RuntimeError("screen watcher is not running")
-        if not isinstance(data, dict) or data.get("watcher_pid") != live.get("pid"):
-            raise RuntimeError("watcher screen_state does not belong to running watcher")
+        data, waited = _wait_for_fresh_watch_state(
+            args.max_frame_age, args.wait_fresh
+        )
+        focus = current_focus()
+        if not focus.get("truthan_foreground", False):
+            raise RuntimeError("Tru Than lost foreground while waiting for fresh OCR")
+        print(f"WATCH_WAITED_FOR_FRESH_SECONDS={waited:.3f}")
     else:
         path = Path(args.ocr or DEFAULT_OCR).expanduser().resolve()
         with path.open("r", encoding="utf-8") as f:
@@ -188,6 +219,9 @@ def main() -> int:
     print(f"TARGET_CENTER_FLOAT={cx:.6f},{cy:.6f}")
     print(f"TARGET_CENTER_TAP={tx},{ty}")
 
+    if args.watch:
+        # A slow console write must not turn a fresh observation into a stale tap.
+        _watch_coordinates(data, item, args.max_frame_age)
     result = tap_px(tx, ty)
     print("TAP_RESULT=" + json.dumps(result, ensure_ascii=True))
     if args.watch:
