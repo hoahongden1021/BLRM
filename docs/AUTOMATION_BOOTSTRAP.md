@@ -70,6 +70,23 @@ Agent screenshots must not clutter the repository root.
 - Explicit `shot` is the exception: it is a deliberate retained capture and defaults to `runtime/agent/screenshots/manual.png`.
 - Old root-level `.agent_screen.png` / `.agent_vision.json` files from previous bridge versions are removed on the next fresh `launch`.
 
+## Verified OCR capability
+
+RapidOCR successfully decoded Chinese text from the real client with bounding boxes and high confidence.
+
+Observed start/entry screen signature:
+- `诛神`
+- `online`
+- `仙境悟道`
+- `开始游戏`
+- `快速进入` (OCR may include an extra leading glyph/icon)
+- `修复游戏`
+- `退出游戏`
+
+This screen is a pre-game entry/menu screen and maps to `LOGIN_OR_ENTRY`, not `IN_GAME`.
+
+Do not classify `IN_GAME` from OCR menu text alone. `IN_GAME` still requires runtime-state proof (active game connection, concrete scene id, and player coordinates).
+
 ## Required state model
 
 Use these logical states only after corresponding runtime evidence is observed:
