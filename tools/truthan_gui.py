@@ -10,6 +10,7 @@ import base64
 import json
 import os
 import re
+import socket
 import struct
 import subprocess
 import sys
@@ -27,6 +28,8 @@ ACTIVITY = os.environ.get(
 VISION_MODEL = os.environ.get("TRUTHAN_VISION_MODEL", "qwen3-vl-8k:latest")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 ROOT = Path(__file__).resolve().parents[1]
+SERVER_DIR = ROOT / "server"
+LOCAL_SERVER_PORTS = (1888, 8089, 19000, 2888, 29000)
 DEFAULT_SCREENSHOT = ROOT / ".agent_screen.png"
 LAST_VISION = ROOT / ".agent_vision.json"
 REMOTE_SCREENSHOT = "/sdcard/__truthan_agent.png"
@@ -169,10 +172,117 @@ def current_focus() -> dict[str, Any]:
     }
 
 
+def _port_open(port: int, timeout: float = 0.20) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(timeout)
+        return s.connect_ex(("127.0.0.1", int(port))) == 0
+
+
+def _local_server_path() -> Path:
+    preferred = SERVER_DIR / "main.py"
+    if preferred.exists():
+        return preferred
+
+    candidates = sorted(
+        SERVER_DIR.glob("truthan_local_server_v*.py"),
+        key=lambda p: p.name,
+        reverse=True,
+    )
+    if not candidates:
+        raise ToolError(f"Local Tru Than server not found under: {SERVER_DIR}")
+    return candidates[0]
+
+
+def _server_port_state() -> dict[int, bool]:
+    return {port: _port_open(port) for port in LOCAL_SERVER_PORTS}
+
+
+def ensure_local_server(wait_seconds: float = 8.0) -> dict[str, Any]:
+    """Ensure one local Tru Than server is listening before launching the client."""
+    before = _server_port_state()
+
+    if all(before.values()):
+        return {
+            "started": False,
+            "already_running": True,
+            "server": None,
+            "ports": before,
+        }
+
+    if any(before.values()):
+        raise ToolError(
+            "Partial local-server port occupancy detected; refusing to start a "
+            f"second server. ports={before}"
+        )
+
+    server = _local_server_path()
+    kwargs: dict[str, Any] = {
+        "cwd": str(server.parent),
+        "env": os.environ.copy(),
+    }
+    if os.name == "nt":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
+
+    try:
+        subprocess.Popen(
+            [sys.executable, "-u", str(server)],
+            **kwargs,
+        )
+    except OSError as exc:
+        raise ToolError(f"Failed to start local server {server}: {exc}") from exc
+
+    deadline = time.time() + wait_seconds
+    after = _server_port_state()
+    while time.time() < deadline and not all(after.values()):
+        time.sleep(0.20)
+        after = _server_port_state()
+
+    if not all(after.values()):
+        raise ToolError(
+            f"Local server did not become ready within {wait_seconds:.1f}s. "
+            f"server={server} ports={after}"
+        )
+
+    return {
+        "started": True,
+        "already_running": False,
+        "server": str(server),
+        "ports": after,
+    }
+
+
+def ensure_adb_reverse() -> dict[str, str]:
+    """Recreate all local TCP reverse rules required by the Tru Than client."""
+    result: dict[str, str] = {}
+    for port in LOCAL_SERVER_PORTS:
+        adb("reverse", "--remove", f"tcp:{port}", check=False)
+        cp = adb("reverse", f"tcp:{port}", f"tcp:{port}")
+        result[str(port)] = cp.stdout.strip() or "ok"
+    return result
+
+
+def prepare_local_runtime() -> dict[str, Any]:
+    # Validate ADB before touching the local server so failures are explicit.
+    state = adb("get-state").stdout.strip()
+    if state != "device":
+        raise ToolError(f"ADB device is not ready: {state!r}")
+
+    server = ensure_local_server()
+    reverse = ensure_adb_reverse()
+    return {
+        "adb_state": state,
+        "server": server,
+        "adb_reverse": reverse,
+    }
+
+
 def launch_game() -> dict[str, Any]:
+    # A working local server + adb reverse are prerequisites for this client.
+    runtime = prepare_local_runtime()
     component = f"{PACKAGE}/{ACTIVITY}"
     cp = adb("shell", "am", "start", "-n", component)
     return {
+        "runtime": runtime,
         "component": component,
         "stdout": cp.stdout.strip(),
         "stderr": cp.stderr.strip(),
