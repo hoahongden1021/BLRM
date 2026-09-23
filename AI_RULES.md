@@ -37,3 +37,14 @@ For each reverse-engineering task:
 5. implement the smallest possible server change;
 6. test on client;
 7. document only what the test proved.
+
+## GPT-20B handoff rules (standing user instruction)
+
+These rules apply to GPT-20B tasks handed off by Codex in this project:
+
+1. Codex writes task prompts for GPT-20B in English. Keep exact Chinese UI text, code identifiers, and repository paths unchanged.
+2. GPT-20B reads `docs/GPT20_HANDOFF.md` and the startup rules before working. If that file is absent locally, check the Git branch and fetch/pull the current branch safely; a failed read alone does not prove the file is absent from GitHub.
+3. For JSON tool arguments on Windows, write paths entirely with forward slashes, for example `C:/Users/Mech/Desktop/BLRM/docs/research/NPC_INTERACTION_HANDOFF.md`. Do not mix separators or place a single unescaped backslash in JSON. Use `cmd /c 99_agent_handoff.bat` and `cmd /c 99_gpt20_publish.bat` from the repository root.
+4. A parse error, failed tool call, or unverified write means the operation failed. Re-read each changed file and inspect `git diff` and `git status --short` before claiming completion. Report tests exactly as run; server-side code alone does not verify client-side NPC interactions.
+5. At the end of each handed-off task, write an accurate UTF-8 `loggpt/_current.md` with actual changed files, commands, evidence level, and blockers. Check `git status --short` before publication; remove only temporary files created by this session, and stop/report unexpected files instead of silently publishing them. Run the handoff BAT, then the publisher BAT. Success requires `PUSH_OK`; otherwise report `PUBLISH_FAILED` and the concrete error.
+6. The user has explicitly authorized commit/push for this GPT-20B handoff workflow. This permission does not apply to unrelated tasks, and a task-specific instruction to skip publication takes precedence. See `docs/GPT20_HANDOFF.md` for the log/publisher contract.
