@@ -92,6 +92,16 @@ def _read_json(path: Path) -> dict[str, Any] | None:
         return None
 
 
+def _log_tail(max_chars: int = 8000) -> str:
+    try:
+        text = LOG_PATH.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    if len(text) > max_chars:
+        text = text[-max_chars:]
+    return text.strip()
+
+
 def _pid_alive(pid: int) -> bool:
     if pid <= 0:
         return False
@@ -315,9 +325,10 @@ def _launch_scrcpy_server(
     last_error: Exception | None = None
     while time.time() < deadline:
         if proc.poll() is not None:
+            tail = _log_tail()
             raise WatchError(
                 f"scrcpy server exited early with code {proc.returncode}; "
-                f"see {LOG_PATH}"
+                f"log_tail={tail!r}"
             )
         try:
             sock = socket.create_connection(("127.0.0.1", port), timeout=0.8)
@@ -328,7 +339,10 @@ def _launch_scrcpy_server(
             time.sleep(0.15)
 
     proc.terminate()
-    raise WatchError(f"could not connect to scrcpy raw stream: {last_error}")
+    raise WatchError(
+        f"could not connect to scrcpy raw stream: {last_error}; "
+        f"log_tail={_log_tail()!r}"
+    )
 
 
 def _frame_signature(frame: Any, stride: int = 24) -> Any:
@@ -400,7 +414,10 @@ def _decode_loop(sock: socket.socket, shared: SharedFrame) -> None:
             except socket.timeout:
                 continue
             if not chunk:
-                raise WatchError("scrcpy raw video socket closed")
+                raise WatchError(
+                    "scrcpy raw video socket closed; "
+                    f"log_tail={_log_tail()!r}"
+                )
             for packet in codec.parse(chunk):
                 for frame in codec.decode(packet):
                     shared.put(frame.to_ndarray(format="bgr24"))
@@ -692,6 +709,10 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
     old = stop_watcher(wait_seconds=3.0)
     WATCH_DIR.mkdir(parents=True, exist_ok=True)
     STOP_PATH.unlink(missing_ok=True)
+    try:
+        LOG_PATH.write_text("", encoding="utf-8")
+    except OSError:
+        pass
 
     cmd = [
         sys.executable,
@@ -743,6 +764,7 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
                 raise WatchError(
                     "watcher failed to start: "
                     + json.dumps(last_status, ensure_ascii=True)
+                    + f"; log_tail={_log_tail()!r}"
                 )
         if proc.poll() is not None:
             raise WatchError(
