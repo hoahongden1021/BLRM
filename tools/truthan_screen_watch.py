@@ -619,9 +619,19 @@ def _force_stop_pid(pid: int) -> None:
 
 def stop_watcher(wait_seconds: float = 5.0) -> dict[str, Any]:
     pid = _load_pid()
+    meta = _read_json(STATUS_PATH) or {}
+    port = int(meta.get("port") or DEFAULT_PORT)
+
     if not pid or not _pid_alive(pid):
         PID_PATH.unlink(missing_ok=True)
-        return {"stopped": False, "reason": "not_running"}
+        _adb("forward", "--remove", f"tcp:{port}", check=False)
+        killed = _kill_old_raw_scrcpy_servers()
+        return {
+            "stopped": False,
+            "reason": "not_running",
+            "cleanup_port": port,
+            "killed_raw_server_pids": killed,
+        }
 
     STOP_PATH.parent.mkdir(parents=True, exist_ok=True)
     STOP_PATH.touch()
@@ -634,8 +644,19 @@ def stop_watcher(wait_seconds: float = 5.0) -> dict[str, Any]:
         forced = True
         _force_stop_pid(pid)
 
+    # Best-effort cleanup even after a forced watcher termination.
+    _adb("forward", "--remove", f"tcp:{port}", check=False)
+    killed = _kill_old_raw_scrcpy_servers()
+    _adb("shell", "rm", "-f", REMOTE_SERVER, check=False)
+
     PID_PATH.unlink(missing_ok=True)
-    return {"stopped": True, "pid": pid, "forced": forced}
+    return {
+        "stopped": True,
+        "pid": pid,
+        "forced": forced,
+        "cleanup_port": port,
+        "killed_raw_server_pids": killed,
+    }
 
 
 def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
