@@ -8,6 +8,7 @@ This phase must pass before navigation or NPC interaction automation is attempte
 
 From an arbitrary normal client startup state, the local Android agent must be able to:
 
+0. ensure the local Tru Than Python server is listening and recreate all required ADB reverse rules;
 1. launch `com.t4game`;
 2. identify the actual current client screen from tool output rather than assumptions;
 3. handle a reconnect/network-error dialog when it is actually present;
@@ -38,7 +39,7 @@ Temporary Qwen3-VL use is allowed for one-time calibration. The long-term fast p
 - `tools/truthan_gui.py`
   - `doctor`
   - `status`
-  - `launch`
+  - `launch` — now first ensures the local Python server is running, recreates ADB reverse for ports 1888/8089/19000/2888/29000, then launches the client
   - `shot`
   - `observe`
   - `locate`
@@ -68,6 +69,21 @@ Use these logical states only after corresponding runtime evidence is observed:
 - `UNKNOWN_SCREEN`
 
 `UNKNOWN_SCREEN` must not trigger guessed taps.
+
+## Mandatory runtime prerequisite
+
+The Android client cannot complete the local login flow without the local Python server.
+
+For bootstrap work, `py tools\truthan_gui.py launch` is the canonical launcher. It now performs this prerequisite sequence automatically:
+
+1. require an ADB device in `device` state;
+2. detect whether all five local server ports are already listening;
+3. if none are listening, start the current `server/truthan_local_server_v*.py` in a separate process and wait for all ports;
+4. if only some expected ports are occupied, STOP with an explicit conflict instead of starting a second server;
+5. recreate ADB reverse for 1888, 8089, 19000, 2888 and 29000;
+6. launch `com.t4game/j2ab.android.app.J2ABMIDletActivity`.
+
+Do not run OCR/vision bootstrap diagnosis against a client that was launched without these prerequisites.
 
 ## IN_GAME proof
 
