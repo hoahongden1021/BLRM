@@ -30,8 +30,10 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 ROOT = Path(__file__).resolve().parents[1]
 SERVER_DIR = ROOT / "server"
 LOCAL_SERVER_PORTS = (1888, 8089, 19000, 2888, 29000)
-DEFAULT_SCREENSHOT = ROOT / ".agent_screen.png"
-LAST_VISION = ROOT / ".agent_vision.json"
+AGENT_RUNTIME_DIR = ROOT / "runtime" / "agent"
+SCREENSHOT_DIR = AGENT_RUNTIME_DIR / "screenshots"
+DEFAULT_SCREENSHOT = SCREENSHOT_DIR / "manual.png"
+LAST_VISION = AGENT_RUNTIME_DIR / "last_vision.json"
 REMOTE_SCREENSHOT = "/sdcard/__truthan_agent.png"
 
 DANGEROUS_TARGET_WORDS = {
@@ -153,10 +155,32 @@ def capture(path: Path = DEFAULT_SCREENSHOT) -> Path:
     path = path.resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     adb("shell", "screencap", "-p", REMOTE_SCREENSHOT)
-    cp = adb("pull", REMOTE_SCREENSHOT, str(path))
+    try:
+        adb("pull", REMOTE_SCREENSHOT, str(path))
+    finally:
+        # The device-side capture is only a transport file; never leave it behind.
+        adb("shell", "rm", "-f", REMOTE_SCREENSHOT, check=False)
     if not path.exists() or path.stat().st_size <= 0:
         raise ToolError("Screenshot pull produced an empty/missing file.")
     return path
+
+
+def capture_transient() -> Path:
+    SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    path = SCREENSHOT_DIR / f"tmp_{time.time_ns()}.png"
+    return capture(path)
+
+
+def cleanup_transient(path: Path | None) -> None:
+    if path is None:
+        return
+    try:
+        resolved = path.resolve()
+        base = SCREENSHOT_DIR.resolve()
+        if resolved.parent == base and resolved.name.startswith("tmp_"):
+            resolved.unlink(missing_ok=True)
+    except OSError:
+        pass
 
 
 def current_focus() -> dict[str, Any]:
@@ -462,38 +486,49 @@ If uncertain, lower confidence.
 
 
 def observe(image: Path | None = None, extra_prompt: str = "") -> dict[str, Any]:
-    if image is None:
-        image = capture()
+    owned_image = image is None
+    if owned_image:
+        image = capture_transient()
+    assert image is not None
     image = image.resolve()
-    width, height = png_size(image)
-    prompt = vision_base_prompt(width, height) + """
+    try:
+        width, height = png_size(image)
+        prompt = vision_base_prompt(width, height) + """
 Describe the current game screen.
 List visible text and every meaningful interactive-looking element:
 buttons, fields, tabs, dialog actions, character/role entries, and obvious navigation controls.
 For each interactive element give its visible label, kind, center_norm, bbox_norm, confidence.
 If a dialog is visible, summarize it in the dialog field.
 """ + ("\nAdditional instruction:\n" + extra_prompt if extra_prompt else "")
-    result = ollama_chat(image, prompt, OBSERVE_SCHEMA)
-    envelope = {
-        "image": str(image),
-        "image_size": [width, height],
-        "model": VISION_MODEL,
-        "focus": current_focus(),
-        "vision": result,
-    }
-    LAST_VISION.write_text(
-        json.dumps(envelope, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    return envelope
+        result = ollama_chat(image, prompt, OBSERVE_SCHEMA)
+        envelope = {
+            "image": str(image),
+            "image_transient": owned_image,
+            "image_size": [width, height],
+            "model": VISION_MODEL,
+            "focus": current_focus(),
+            "vision": result,
+        }
+        LAST_VISION.parent.mkdir(parents=True, exist_ok=True)
+        LAST_VISION.write_text(
+            json.dumps(envelope, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return envelope
+    finally:
+        if owned_image:
+            cleanup_transient(image)
 
 
 def locate(target: str, image: Path | None = None) -> dict[str, Any]:
-    if image is None:
-        image = capture()
+    owned_image = image is None
+    if owned_image:
+        image = capture_transient()
+    assert image is not None
     image = image.resolve()
-    width, height = png_size(image)
-    prompt = vision_base_prompt(width, height) + f"""
+    try:
+        width, height = png_size(image)
+        prompt = vision_base_prompt(width, height) + f"""
 Find the visible interactive element matching this target:
 
 TARGET: {target}
@@ -502,10 +537,14 @@ It may be represented by Chinese text, an icon, or a visually obvious button.
 Return found=false if it is not clearly present.
 Do not choose a different control merely because it is nearby.
 """
-    result = ollama_chat(image, prompt, LOCATE_SCHEMA)
-    result["_image"] = str(image)
-    result["_image_size"] = [width, height]
-    return result
+        result = ollama_chat(image, prompt, LOCATE_SCHEMA)
+        result["_image"] = str(image)
+        result["_image_transient"] = owned_image
+        result["_image_size"] = [width, height]
+        return result
+    finally:
+        if owned_image:
+            cleanup_transient(image)
 
 
 def norm_to_px(center: list[int], width: int, height: int) -> tuple[int, int]:
@@ -544,37 +583,40 @@ def click_target(target: str, min_confidence: float, force: bool, after: bool) -
             f"(matched '{hit}'). Re-run with --force only if intentional."
         )
 
-    image = capture()
-    width, height = png_size(image)
-    result = locate(target, image=image)
+    image = capture_transient()
+    try:
+        width, height = png_size(image)
+        result = locate(target, image=image)
 
-    if not result.get("found", False):
-        return {"clicked": False, "reason": "target_not_found", "vision": result}
+        if not result.get("found", False):
+            return {"clicked": False, "reason": "target_not_found", "vision": result}
 
-    confidence = float(result.get("confidence", 0.0))
-    if confidence < min_confidence:
-        return {
-            "clicked": False,
-            "reason": "confidence_too_low",
-            "required": min_confidence,
-            "vision": result,
+        confidence = float(result.get("confidence", 0.0))
+        if confidence < min_confidence:
+            return {
+                "clicked": False,
+                "reason": "confidence_too_low",
+                "required": min_confidence,
+                "vision": result,
+            }
+
+        x, y = norm_to_px(result["center_norm"], width, height)
+        tap_result = tap_px(x, y)
+        output: dict[str, Any] = {
+            "clicked": True,
+            "target": target,
+            "matched_label": result.get("matched_label", ""),
+            "confidence": confidence,
+            "tap": tap_result,
+            "before_image_transient": True,
         }
 
-    x, y = norm_to_px(result["center_norm"], width, height)
-    tap_result = tap_px(x, y)
-    output: dict[str, Any] = {
-        "clicked": True,
-        "target": target,
-        "matched_label": result.get("matched_label", ""),
-        "confidence": confidence,
-        "tap": tap_result,
-        "before_image": str(image),
-    }
-
-    if after:
-        time.sleep(1.0)
-        output["after"] = observe()
-    return output
+        if after:
+            time.sleep(1.0)
+            output["after"] = observe()
+        return output
+    finally:
+        cleanup_transient(image)
 
 
 def adb_type_text(text: str) -> dict[str, Any]:
@@ -725,13 +767,16 @@ def main() -> int:
         elif args.command == "tap":
             print_json(tap_px(args.x, args.y))
         elif args.command == "tapn":
-            image = capture()
-            w, h = png_size(image)
-            x, y = norm_to_px([args.x, args.y], w, h)
-            out = tap_px(x, y)
-            out["normalized"] = [args.x, args.y]
-            out["image_size_used"] = [w, h]
-            print_json(out)
+            image = capture_transient()
+            try:
+                w, h = png_size(image)
+                x, y = norm_to_px([args.x, args.y], w, h)
+                out = tap_px(x, y)
+                out["normalized"] = [args.x, args.y]
+                out["image_size_used"] = [w, h]
+                print_json(out)
+            finally:
+                cleanup_transient(image)
         elif args.command == "text":
             print_json(adb_type_text(args.value))
         elif args.command == "back":
