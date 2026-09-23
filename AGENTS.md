@@ -234,6 +234,18 @@ Long Tinh is useful for architecture, not for proving Tru Than wire protocol.
 
 ## Automation phase gate
 
+For every local Android/game runtime test session, first create a fresh runtime with:
+
+`py tools\truthan_gui.py launch`
+
+This is mandatory even if the server or game already appears to be running. The launcher must:
+- stop any old Tru Than local-server Python process and start the current server fresh;
+- recreate ADB reverse rules;
+- force-stop `com.t4game` if it is running;
+- launch `com.t4game` fresh.
+
+Do not tell the user to manually prepare this routine state. Static source-only tasks that do not touch the emulator/server are exempt.
+
 For local Android/game automation, follow this order and do not skip phases:
 
 1. BOOTSTRAP: start each test from a fresh local runtime: force-stop the client, stop any old Tru Than local-server process, start the current Python server, recreate ADB reverse rules, launch `com.t4game`, identify the current screen, handle reconnect/login, create a role only when no role exists, select an existing role when present, enter the game, and prove `IN_GAME` from runtime evidence.
