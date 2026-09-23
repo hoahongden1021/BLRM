@@ -232,6 +232,19 @@ DEX/JADX -> smali -> packet capture -> assets -> runtime/Logcat -> Long Tinh ref
 
 Long Tinh is useful for architecture, not for proving Tru Than wire protocol.
 
+## Automation phase gate
+
+For local Android/game automation, follow this order and do not skip phases:
+
+1. BOOTSTRAP: launch `com.t4game`, identify the current screen, handle reconnect/login, create a role only when no role exists, select an existing role when present, enter the game, and prove `IN_GAME` from runtime evidence.
+2. STATE: expose scene/player/NPC state to the agent.
+3. NAVIGATION: movement/pathing.
+4. INTERACTION: NPC selection/dialogue/menu actions.
+5. QUEST/COMBAT automation.
+
+Do not implement or test NAVIGATION/INTERACTION automation until BOOTSTRAP has a real-client PASS.
+Server-side login support is not the same as agent-side bootstrap automation.
+
 ## Mandatory final handoff
 
 After every task:
