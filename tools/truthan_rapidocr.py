@@ -65,6 +65,17 @@ def classify_screen(texts: list[str]) -> dict[str, Any]:
             "basis": "VERIFIED_OCR_SIGNATURE",
         }
 
+    # VERIFIED from real-client OCR after tapping 开始游戏.
+    # The account/login screen contains the account label and still shows 开始游戏.
+    if "账号:" in joined and "开始游戏" in joined:
+        return {
+            "state": "LOGIN_OR_ENTRY",
+            "substate": "ACCOUNT_LOGIN",
+            "confidence": 1.0,
+            "evidence": ["账号:", "开始游戏"],
+            "basis": "VERIFIED_OCR_SIGNATURE",
+        }
+
     # Previously observed real-client reconnect/network-error wording.
     if "网络故障" in joined:
         return {
