@@ -952,6 +952,7 @@ def handle(c, addr, port):
         print(m.strip())
 
         c.settimeout(300)
+        close_reason = "unknown"
         buf = bytearray()
         visible_npcs = {}
         last_move = None
@@ -968,13 +969,16 @@ def handle(c, addr, port):
             try:
                 d = c.recv(65535)
             except socket.timeout:
+                close_reason = "server_idle_300s"
                 print(f"TIMEOUT port={port} peer={addr}")
                 break
             except OSError as e:
+                close_reason = f"socket_error_{type(e).__name__}"
                 print(f"SOCKET ERROR port={port}: {e}")
                 break
 
             if not d:
+                close_reason = "peer_eof"
                 break
 
             buf += d
@@ -1176,7 +1180,10 @@ def handle(c, addr, port):
                 last_npc_request=last_npc_request,
                 game_connected=False,
             )
-        print(f"CLOSED port={port} peer={addr}")
+        closed = f"CLOSED {time.ctime()} port={port} peer={addr} reason={close_reason}\n"
+        f.write(closed.encode())
+        f.flush()
+        print(closed.strip())
 
 def serve(p):
     s = socket.socket()
