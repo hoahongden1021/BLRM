@@ -107,6 +107,12 @@ If find_files/search returns a path, COPY THAT EXACT RETURNED PATH into the next
 
 Do not shorten or reconstruct a discovered path from memory.
 
+For JSON tool arguments, use forward slashes throughout every Windows path.
+A mixed path such as `C:/Users\Mech\Desktop\BLRM/docs/file.md` contains
+invalid JSON escapes and the tool call will fail before the file is read or
+written. Do not paste raw Windows backslashes into JSON; if the tool requires
+them, escape each one according to the tool format.
+
 ---
 
 ## 5. Tool success rules
@@ -223,7 +229,10 @@ Do not modify:
 
 unless explicitly requested by the current task.
 
-Never auto-commit or auto-push Git changes.
+Do not auto-commit or auto-push Git changes outside the standing user-approved
+GPT-20B handoff workflow in `AI_RULES.md` and `docs/GPT20_HANDOFF.md`. For that
+workflow, the user explicitly requested a commit/push after each task; follow
+the task's narrower instruction if it says to skip publication.
 
 ---
 
@@ -242,6 +251,12 @@ docs/research/LONGTINH_ARCHITECTURE_FINDINGS.md
 After writing a file, verify the tool response indicates success.
 
 Do not say a document was saved if write_file failed.
+
+For GPT-20B handoffs, the session log and publisher-generated log are authorized
+outputs in addition to the requested task files. Verify each write by reading
+it back. Before running the publisher, review `git status --short` and the diff;
+remove only session-created temporary files, and report unexpected files instead
+of publishing unknown content through the publisher's `git add -A`.
 
 ---
 
