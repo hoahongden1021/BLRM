@@ -73,8 +73,10 @@ def _wait_for_watch_transition(before: dict[str, Any], after_timeout: float) -> 
 
     before_class = before.get("classification") or {}
     before_frame_id = int(before.get("frame_id") or 0)
+    started = time.monotonic()
     deadline = time.monotonic() + after_timeout
     last = before
+    first_transition = None
     while time.monotonic() < deadline:
         current = _read_json(STATE_PATH)
         if current and current.get("watcher_pid") == before.get("watcher_pid"):
@@ -83,14 +85,31 @@ def _wait_for_watch_transition(before: dict[str, Any], after_timeout: float) -> 
             if (int(current.get("frame_id") or 0) > before_frame_id
                     and (classification.get("state"), classification.get("substate"))
                     != (before_class.get("state"), before_class.get("substate"))):
-                return {
-                    "transition_observed": True,
-                    "frame_id": current.get("frame_id"),
-                    "classification": classification,
-                }
+                if first_transition is None:
+                    first_transition = current.get("frame_id")
+                # The game and the OCR watcher both lag the ADB tap. A brief
+                # UNKNOWN_SCREEN frame is evidence of movement, not a final state.
+                if (time.monotonic() - started >= min(5.0, after_timeout)
+                        and classification.get("state") != "UNKNOWN_SCREEN"
+                        and classification.get("basis") == "VERIFIED_OCR_SIGNATURE"):
+                    return {
+                        "transition_observed": True,
+                        "verified_transition_observed": True,
+                        "first_transition_frame_id": first_transition,
+                        "frame_id": current.get("frame_id"),
+                        "classification": classification,
+                    }
         time.sleep(0.15)
+    last_class = last.get("classification") or {}
+    verified = (first_transition is not None
+                and (last_class.get("state"), last_class.get("substate"))
+                != (before_class.get("state"), before_class.get("substate"))
+                and last_class.get("state") != "UNKNOWN_SCREEN"
+                and last_class.get("basis") == "VERIFIED_OCR_SIGNATURE")
     return {
-        "transition_observed": False,
+        "transition_observed": first_transition is not None,
+        "verified_transition_observed": verified,
+        "first_transition_frame_id": first_transition,
         "frame_id": last.get("frame_id"),
         "classification": last.get("classification"),
     }
@@ -129,6 +148,55 @@ def _new_packet_headers(cursor: dict[Path, int], start_epoch: float) -> list[dic
         except OSError:
             continue
     return events[-40:]
+
+
+def _login_needs_confirm_tap(before: dict[str, Any], cursor: dict[Path, int],
+                             start_epoch: float, android_pid: str | None,
+                             wait_seconds: float = 18.0) -> tuple[bool, str]:
+    """Confirm an item only after a post-tap OCR frame shows no progress.
+
+    The game can take several seconds to respond, and OCR publishes later still.
+    """
+    from truthan_gui import current_focus
+    from truthan_screen_watch import STATE_PATH, _read_json
+
+    deadline = time.monotonic() + wait_seconds
+    ready = False
+    expected_center = _center(next(item["box"] for item in before["items"]
+                                   if item.get("text") == "登录游戏"))
+    while True:
+        if _new_packet_headers(cursor, start_epoch):
+            return False, "first_tap_produced_server_activity"
+        current = _read_json(STATE_PATH)
+        if not current or current.get("watcher_pid") != before.get("watcher_pid"):
+            return False, "watcher_changed"
+        if (int(current.get("frame_id") or 0) > int(before.get("frame_id") or 0)
+                and float(current.get("frame_timestamp_epoch") or 0) >= start_epoch + 5):
+            classification = current.get("classification") or {}
+            if (classification.get("state"), classification.get("substate")) != (
+                "LOGIN_OR_ENTRY", "ACCOUNT_LOGIN"
+            ) or classification.get("basis") != "VERIFIED_OCR_SIGNATURE":
+                return False, "login_screen_changed"
+            matches = [item for item in current.get("items") or []
+                       if item.get("text") == "登录游戏"]
+            if len(matches) != 1 or any(abs(a - b) > 12 for a, b in
+                                        zip(_center(matches[0]["box"]), expected_center)):
+                return False, "login_target_changed"
+            ready = True
+            break
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(0.2)
+
+    if not ready:
+        return False, "no_post_tap_ocr_frame_after_5_seconds"
+    if not current_focus().get("truthan_foreground", False):
+        return False, "game_lost_foreground"
+    if android_pid is not None and _game_pid() != android_pid:
+        return False, "game_process_changed"
+    if _new_packet_headers(cursor, start_epoch):
+        return False, "first_tap_produced_server_activity"
+    return True, "same_login_screen_after_5_seconds_without_server_activity"
 
 
 def _game_pid() -> str | None:
@@ -230,7 +298,7 @@ def main() -> int:
         "--press-ms", type=int, default=0,
         help="Hold one stationary touchscreen press for this many milliseconds instead of an instant tap.",
     )
-    p.add_argument("--after-timeout", type=float, default=12.0)
+    p.add_argument("--after-timeout", type=float, default=20.0)
     p.add_argument("--trace-login", action="store_true",
                    help="Observe login screen and server connection for 20 seconds after the tap; report frame headers only.")
     p.add_argument("--min-score", type=float, default=0.95)
@@ -325,8 +393,10 @@ def main() -> int:
     if args.watch:
         if not current_focus().get("truthan_foreground", False):
             raise RuntimeError("Tru Than lost foreground before OCR-derived tap")
-    cursor = _packet_cursor() if args.trace_login else {}
-    android_pid = _game_pid() if args.trace_login else None
+    login_target = args.watch and args.text == "登录游戏" and state == "LOGIN_OR_ENTRY" \
+        and substate == "ACCOUNT_LOGIN"
+    cursor = _packet_cursor() if (args.trace_login or login_target) else {}
+    android_pid = _game_pid() if (args.trace_login or login_target) else None
     start_epoch = time.time()
     if args.press_ms:
         # ADB's instant tap sends DOWN and UP together. A stationary swipe
@@ -342,6 +412,20 @@ def main() -> int:
     else:
         result = tap_px(tx, ty)
     print("TAP_RESULT=" + json.dumps(result, ensure_ascii=True))
+    if login_target:
+        confirm, reason = _login_needs_confirm_tap(data, cursor, start_epoch, android_pid)
+        second = {"sent": confirm, "reason": reason}
+        if confirm:
+            if args.press_ms:
+                cp = adb("shell", "input", "touchscreen", "swipe",
+                         str(tx), str(ty), str(tx), str(ty), str(args.press_ms))
+                second["tap_result"] = {
+                    "tap_px": [tx, ty], "press_ms": args.press_ms,
+                    "stdout": cp.stdout.strip(), "stderr": cp.stderr.strip(),
+                }
+            else:
+                second["tap_result"] = tap_px(tx, ty)
+        print("FOCUS_CONFIRM=" + json.dumps(second, ensure_ascii=True))
     if args.watch:
         after = (_trace_login_after_tap(data, max(20.0, args.after_timeout), cursor, start_epoch,
                                         android_pid)
