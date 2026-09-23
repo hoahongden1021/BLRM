@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -23,10 +24,17 @@ EXPECTED_REMOTE = re.compile(r"(?:^|[:/])hoahongden1021/BLRM(?:\.git)?/?$", re.I
 
 
 def git(*args: str) -> str:
-    result = subprocess.run(
-        ["git", *args], cwd=ROOT, text=True, encoding="utf-8",
-        errors="replace", capture_output=True, check=False,
-    )
+    env = os.environ.copy()
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    env["GCM_INTERACTIVE"] = "never"
+    try:
+        result = subprocess.run(
+            ["git", *args], cwd=ROOT, text=True, encoding="utf-8",
+            errors="replace", capture_output=True, check=False,
+            timeout=180, env=env,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"git {args[0]} timed out after 180 seconds") from exc
     if result.returncode:
         detail = (result.stderr or result.stdout).strip()
         raise RuntimeError(f"git {args[0]} failed ({result.returncode}): {detail}")
