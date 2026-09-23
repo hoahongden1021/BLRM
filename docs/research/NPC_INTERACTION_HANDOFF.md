@@ -1,36 +1,50 @@
-# NPC Interaction Hand‑off
+# NPC interaction handoff
 
-## Current Server‑Side Implementation (v0.26)
+## Evidence boundary
 
-| Client action | Conditional state | Server command | Server handler | Response | Evidence level |
-|---|---|---|---|---|---|
-| **Player selects an NPC** (sprite inside view radius and `can_select==1`) | NPC visible and `SINGLE_NPC_PROBE==true` | `cmd=120` _(NpcFunctionListRequest)_ | `handle()` → `npc_function_list_body()` | `cmd=120` reply: greeting string + optional function record (`flag=0`, `function=7`, label="Noi chuyen") | `UNKNOWN` |
-| **Player clicks the “Talk” (function id 7)** | Same as above | `cmd=73` _(NpcTalkRequest)_ | `handle()` → `npc_talk_body()` | `cmd=73` reply: two string pairs (title + body); if not available reply is `bytes([1])` (empty status). | `UNKNOWN` |
-| **Other functions** | Not implemented | – | – | – | `UNKNOWN` |
+The Android client has rendered and selected one synthetic GNPC in run112928
+(`docs/ENTITIES.md`). That run did not capture a working NPC dialogue.
+The original NPC identity, quest data, and dialogue behavior remain UNKNOWN.
+This note describes what the current server **implements**, not a confirmed
+client/server interaction.
 
-## Client–Server Interaction Flow
-1. **NPC selection** – Client detects an NPC sprite meeting `can_select==1` via `GameWorld.isNpcInUserView` (smali `GameWorld.smali`, lines around 7300). No packet is sent.
-2. **Request function list** – Client sends `cmd=120` with the NPC spriteId (`getId()` from `npc` object). No public documentation; the packet body consists of 4‑byte spriteId only (smali `GameScreen.sendNpcFunctionList` near line 250‑260).
-3. **Server reply** – `handle()` builds body with `npc_function_list_body` (server code lines 845‑856). Fields: greeting string, 4 empty quest groups, and optional function record (flag, function id, label).
-4. **Client receives** – Reads greeting via `GameWorld.receiveNpcFunctionList` (smali `GameScreen.smali`, lines 1400‑1420). Parses function records; stores them in `npcFunctionMenu`, `npcFunctionMenuFlagList`, `npcFunctionMenuIdList`.
-5. **Player selects a function** – UI button triggers `DianHua.chooseFunction(i)`.
-6. **Talk request** – Client sends `cmd=73` with the NPC spriteId (smali `DianHua.onFunctionSelect` around line 400‑410).
-7. **Server reply** – `handle()` builds body with `npc_talk_body` (lines 860‑864). Body: status byte 0, count, then a pair of strings per topic.
-8. **Client receives** – Parses via `GameWorld.receiveNpcTalk` (smali `GameScreen.smali`, lines 1500‑1520). Displays topics in a dialogue window.
+## Current server code
 
-## Evidence Status
-- **Server-side**: All handler logic is present in `truthan_local_server_v026.py` lines 845‑864, 860‑864. `UNKNOWN` for client‑side packet format because no captured packets exist.
-- **Client-side**: No packet captures; smali extraction provides only method names/field access—no confirmation of byte ordering or offsets.
-- **Next test**: Capture a real client session selecting the diagnostic NPC and record `cmd=120` and `cmd=73` exchanges to confirm payload structure.
+Source: `server/truthan_local_server_v026.py` on the current branch.
 
-## Recommended Smallest Server Change
-Add validation in `handle()` for `cmd=120` and `cmd=73` that rejects out‑of‑range spriteIds and logs unexpected function indices. This is a non‑invasive patch and can be tested with existing diagnostic probe.
+| Path | Source location | Current behavior | Evidence status |
+|---|---|---|---|
+| Diagnostic spawn | `starter_probe_entities()`, `send_starter_probe_entities()` | `TRUTHAN_SINGLE_NPC_PROBE=1` creates synthetic `TEST OBJ1014`; the regular path leaves population off by default. The current source sets `flags=bytes([3])`. | Code inspection; run112928 verifies only the earlier minimal rendering/selection result, not dialogue or the current flag. |
+| Request dispatch | `handle()`, branch `cmd in (NPC_FUNCTION_LIST, NPC_FUNCTION_TALK)` | `NPC_FUNCTION_LIST=120`, `NPC_FUNCTION_TALK=73`. Both requests must have exactly four body bytes; the server decodes them as a big-endian i32 NPC runtime ID. | Server implementation only; client request format has not been verified by a capture in this handoff. |
+| Availability | Same `handle()` branch | A reply with diagnostic content requires `SINGLE_NPC_PROBE` and an ID in this connection's `visible_npcs`. | Server implementation only. |
+| Function-list reply | `npc_function_list_body()` | Encodes `pstr(greeting)`, four zero bytes, signed-byte function count, then `>bh` (flag, function ID) and `pstr(label)` per function. The available diagnostic path supplies function ID 7, label `Noi chuyen`; unavailable path supplies no functions. | Server encoder only; client parsing/display not confirmed here. |
+| Talk reply | `npc_talk_body()` and `handle()` | Available diagnostic path sends status byte 0, count byte, then title/text string pairs. Unavailable path sends `bytes([1])`. | Server encoder only; client parsing/display not confirmed here. |
 
-## Documentation updates
-- Remove any `VERIFIED` tags that are unsupported.
-- Add a reference table row for the conversation flow.
-- Ensure `docs/PROTOCOL.md` lists `cmd=120` and `cmd=73` with the field description derived from server code.
+The server reads **no function index** from these four-byte requests. There is
+no basis in this handler for an “unexpected function index” check.
 
----
+## Client evidence still needed
 
-*Prepared by OpenCode Agent – 2026‑09‑26.*
+The previous version of this document named `GameScreen.sendNpcFunctionList`,
+`GameWorld.receiveNpcFunctionList`, `DianHua.chooseFunction`, and other
+approximate smali methods/line ranges without an inspected source excerpt.
+Those names and ranges are **unverified** and must not be reused as citations.
+A server docstring mentions `GameWorld.processNpcFunctionListMessage`; verify
+that method directly against the matching Tru Than DEX/JADX and smali before
+documenting the client's read order.
+
+The earlier `ForceGuide.isNpcInUserView` research in `docs/ENTITIES.md`
+describes a tutorial visibility check; it does not establish the NPC selection
+packet flow. Whether `flags=[3]` enables a menu or dialogue is UNKNOWN.
+
+## Next bounded task
+
+Using the locally available matching client source, find the actual call sites
+that produce commands 120 and 73, and the readers for their responses.
+Record exact file, method, and relevant lines or code excerpts, request field
+order/width, reply branches, and any NPC eligibility checks. If a call site is
+absent or cannot be read, report UNKNOWN rather than supplying a guessed
+method. Compare those findings with the server branch above. Do not implement
+new quest records, original NPC mappings, or protocol fields without evidence.
+
+No live client test or server code change was performed for this correction.
