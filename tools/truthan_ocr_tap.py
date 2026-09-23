@@ -77,19 +77,27 @@ def _wait_for_watch_transition(before: dict[str, Any], after_timeout: float) -> 
     deadline = time.monotonic() + after_timeout
     last = before
     first_transition = None
+    last_key = (before_class.get("state"), before_class.get("substate"))
+    screen_events: list[dict[str, Any]] = []
+    observe_full_window = before_class.get("substate") == "ACCOUNT_LOGIN"
     while time.monotonic() < deadline:
         current = _read_json(STATE_PATH)
         if current and current.get("watcher_pid") == before.get("watcher_pid"):
             last = current
             classification = current.get("classification") or {}
+            key = (classification.get("state"), classification.get("substate"))
+            if int(current.get("frame_id") or 0) > before_frame_id and key != last_key:
+                screen_events.append({"frame_id": current.get("frame_id"),
+                                      "state": key[0], "substate": key[1]})
+                last_key = key
             if (int(current.get("frame_id") or 0) > before_frame_id
-                    and (classification.get("state"), classification.get("substate"))
-                    != (before_class.get("state"), before_class.get("substate"))):
+                    and key != (before_class.get("state"), before_class.get("substate"))):
                 if first_transition is None:
                     first_transition = current.get("frame_id")
                 # The game and the OCR watcher both lag the ADB tap. A brief
                 # UNKNOWN_SCREEN frame is evidence of movement, not a final state.
-                if (time.monotonic() - started >= min(5.0, after_timeout)
+                if (not observe_full_window
+                        and time.monotonic() - started >= min(5.0, after_timeout)
                         and classification.get("state") != "UNKNOWN_SCREEN"
                         and classification.get("basis") == "VERIFIED_OCR_SIGNATURE"):
                     return {
@@ -98,6 +106,7 @@ def _wait_for_watch_transition(before: dict[str, Any], after_timeout: float) -> 
                         "first_transition_frame_id": first_transition,
                         "frame_id": current.get("frame_id"),
                         "classification": classification,
+                        "screen_events": screen_events[-20:],
                     }
         time.sleep(0.15)
     last_class = last.get("classification") or {}
@@ -109,9 +118,13 @@ def _wait_for_watch_transition(before: dict[str, Any], after_timeout: float) -> 
     return {
         "transition_observed": first_transition is not None,
         "verified_transition_observed": verified,
+        "returned_to_initial_state": (first_transition is not None and
+                                      (last_class.get("state"), last_class.get("substate"))
+                                      == (before_class.get("state"), before_class.get("substate"))),
         "first_transition_frame_id": first_transition,
         "frame_id": last.get("frame_id"),
         "classification": last.get("classification"),
+        "screen_events": screen_events[-20:],
     }
 
 
@@ -273,8 +286,15 @@ def _trace_login_after_tap(before: dict[str, Any], timeout: float,
                 last_connected = connected
         time.sleep(0.2)
 
+    final_classification = last.get("classification") or {}
+    final_key = (final_classification.get("state"), final_classification.get("substate"))
     return {
         "transition_observed": first_transition is not None,
+        "verified_transition_observed": (
+            first_transition is not None and final_key != initial_key
+            and final_classification.get("state") != "UNKNOWN_SCREEN"
+            and final_classification.get("basis") == "VERIFIED_OCR_SIGNATURE"),
+        "returned_to_initial_state": first_transition is not None and final_key == initial_key,
         "first_transition_frame_id": first_transition,
         "frame_id": last.get("frame_id"),
         "classification": last.get("classification"),
@@ -430,8 +450,10 @@ def main() -> int:
         after = (_trace_login_after_tap(data, max(20.0, args.after_timeout), cursor, start_epoch,
                                         android_pid)
                  if args.trace_login else _wait_for_watch_transition(data, args.after_timeout))
+        if login_target and not args.trace_login:
+            after["packet_headers"] = _new_packet_headers(cursor, start_epoch)
         print("AFTER=" + json.dumps(after, ensure_ascii=True))
-        return 0 if after["transition_observed"] else 3
+        return 0 if after["verified_transition_observed"] else 3
     return 0
 
 
