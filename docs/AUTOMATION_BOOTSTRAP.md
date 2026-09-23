@@ -85,7 +85,14 @@ Agent screenshots must not clutter the repository root.
 
 ## Experimental realtime screen watcher
 
-This is a CANDIDATE path until a real emulator test passes.
+This path has now passed a narrow real-emulator proof:
+- scrcpy 4.1 raw H.264 frames were decoded in memory;
+- frame count advanced into the hundreds;
+- RapidOCR read meaningful Chinese text from the stream;
+- the verified START_MENU signature was classified correctly.
+
+The current remaining issue is stream stability on the Android 15 emulator encoder. The first successful run decoded frames at 2048x918, then the device-side encoder later closed after a capture/encoding error. The watcher therefore now defaults to a conservative 1920 max size and 30 FPS, keeps scrcpy downsize-on-error enabled, and records explicit stream-to-device coordinate scaling so OCR boxes can still produce correct ADB tap coordinates.
+
 
 The implementation follows scrcpy's documented standalone-server mode: the matching scrcpy server can expose a raw H.264 stream over an ADB forward when audio/control are disabled and `raw_stream=true`. The watcher decodes that stream directly in RAM; it does not screenshot the Windows scrcpy window.
 
