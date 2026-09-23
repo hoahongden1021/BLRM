@@ -29,10 +29,10 @@ DEFAULT_PORT = 27191
 # current device-screen coordinate space for adb input.
 DEFAULT_MAX_SIZE = 1920
 DEFAULT_MAX_FPS = 30.0
-# RapidOCR's default detector has a MINIMUM short side of 736 pixels, so it
-# keeps the 1920x862 stream at full size for detection. Keep the original frame
-# for text recognition/boxes, but bound only the detector input.
-DEFAULT_OCR_DET_MAX_SIZE = 960
+# RapidOCR's detector leaves a 1920x862 input at full size. Resize the image
+# before invoking OCR; its detector ignores Det.limit_side_len in max mode for
+# this input (it chooses a limit from the actual input dimensions instead).
+DEFAULT_OCR_MAX_SIZE = 960
 REMOTE_SERVER = "/data/local/tmp/truthan-scrcpy-server.jar"
 PACKAGE = "com.t4game"
 
@@ -226,6 +226,12 @@ def _dependency_info() -> dict[str, Any]:
         out["numpy"] = {"ok": True, "version": np.__version__}
     except Exception as exc:
         out["numpy"] = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
+
+    try:
+        import cv2  # type: ignore
+        out["cv2"] = {"ok": True, "version": cv2.__version__}
+    except Exception as exc:
+        out["cv2"] = {"ok": False, "error": f"{type(exc).__name__}: {exc}"}
     return out
 
 
@@ -467,6 +473,36 @@ def _map_stream_center_to_device(
     ]
 
 
+def _ocr_input_frame(frame: Any, max_size: int) -> Any:
+    height, width = frame.shape[:2]
+    if max_size <= 0 or max(height, width) <= max_size:
+        return frame
+
+    import cv2  # type: ignore
+
+    scale = max_size / max(height, width)
+    target = (max(1, round(width * scale)), max(1, round(height * scale)))
+    return cv2.resize(frame, target, interpolation=cv2.INTER_AREA)
+
+
+def _ocr_box_to_stream(
+    box: Any,
+    *,
+    ocr_size: tuple[int, int],
+    stream_size: tuple[int, int],
+) -> list[list[float]] | None:
+    if not isinstance(box, list) or len(box) != 4:
+        return None
+    ow, oh = ocr_size
+    sw, sh = stream_size
+    if ow <= 0 or oh <= 0:
+        return None
+    try:
+        return [[float(p[0]) * sw / ow, float(p[1]) * sh / oh] for p in box]
+    except (TypeError, ValueError, IndexError):
+        return None
+
+
 class SharedFrame:
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -518,7 +554,7 @@ def _ocr_loop(
     shared: SharedFrame,
     *,
     device_size: tuple[int, int],
-    ocr_det_max_size: int,
+    ocr_max_size: int,
     ocr_fps: float,
     change_threshold: float,
     max_idle_seconds: float,
@@ -526,10 +562,7 @@ def _ocr_loop(
     from rapidocr import RapidOCR  # type: ignore
     from truthan_rapidocr import _extract, classify_screen
 
-    engine = RapidOCR(params={
-        "Det.limit_type": "max",
-        "Det.limit_side_len": ocr_det_max_size,
-    })
+    engine = RapidOCR()
     min_interval = 1.0 / max(ocr_fps, 0.1)
     last_ocr_start = 0.0
     last_ocr_done = 0.0
@@ -557,20 +590,36 @@ def _ocr_loop(
             time.sleep(0.03)
             continue
 
+        stream_size = (int(frame.shape[1]), int(frame.shape[0]))
+        ocr_frame = _ocr_input_frame(frame, ocr_max_size)
+        ocr_size = (int(ocr_frame.shape[1]), int(ocr_frame.shape[0]))
+
         last_ocr_start = time.time()
-        result = engine(frame)
-        ocr_elapsed = time.time() - last_ocr_start
+        result = engine(ocr_frame)
+        fast_ocr_elapsed = time.time() - last_ocr_start
         txts, scores, boxes, rapid_elapsed, rapid_elapsed_list = _extract(result)
         classification = classify_screen(txts)
+        full_res_fallback = False
+        if classification.get("state") == "UNKNOWN_SCREEN" and ocr_frame is not frame:
+            # An unseen screen must remain inspectable even if small text is
+            # missed at the fast resolution. Never guess a control to tap.
+            result = engine(frame)
+            txts, scores, boxes, rapid_elapsed, rapid_elapsed_list = _extract(result)
+            classification = classify_screen(txts)
+            ocr_size = stream_size
+            full_res_fallback = True
+        ocr_elapsed = time.time() - last_ocr_start
 
-        stream_size = (int(frame.shape[1]), int(frame.shape[0]))
         items = []
         for text, score, box in zip(txts, scores, boxes):
-            center = _item_center(box)
+            stream_box = _ocr_box_to_stream(
+                box, ocr_size=ocr_size, stream_size=stream_size
+            )
+            center = _item_center(stream_box)
             items.append({
                 "text": text,
                 "score": score,
-                "box": box,
+                "box": stream_box,
                 "center": center,
                 "tap_center": _map_stream_center_to_device(
                     center,
@@ -588,14 +637,21 @@ def _ocr_loop(
             "frame_timestamp_epoch": frame_ts,
             "frame_age_ms": max(0.0, (time.time() - frame_ts) * 1000.0),
             "frame_size": [stream_size[0], stream_size[1]],
+            "ocr_frame_size": [ocr_size[0], ocr_size[1]],
+            "ocr_to_stream_scale": [
+                stream_size[0] / ocr_size[0],
+                stream_size[1] / ocr_size[1],
+            ],
             "device_size": [device_size[0], device_size[1]],
             "stream_to_device_scale": [
                 device_size[0] / stream_size[0],
                 device_size[1] / stream_size[1],
             ],
-            "ocr_det_max_size": ocr_det_max_size,
+            "ocr_max_size": ocr_max_size,
+            "ocr_full_res_fallback": full_res_fallback,
             "screen_change_score": delta,
             "ocr_wall_seconds": ocr_elapsed,
+            "ocr_fast_wall_seconds": fast_ocr_elapsed,
             "rapidocr_elapse": rapid_elapsed,
             "rapidocr_elapse_list": rapid_elapsed_list,
             "item_count": len(items),
@@ -636,6 +692,8 @@ def _write_status(
 
 
 def worker(args: argparse.Namespace) -> int:
+    if args.ocr_max_size < 0 or 0 < args.ocr_max_size < 128:
+        raise WatchError("--ocr-max-size must be 0 or at least 128")
     info = doctor()
     if not info["ready"]:
         raise WatchError(
@@ -689,7 +747,7 @@ def worker(args: argparse.Namespace) -> int:
             args=(shared,),
             kwargs={
                 "device_size": device_size,
-                "ocr_det_max_size": args.ocr_det_max_size,
+                "ocr_max_size": args.ocr_max_size,
                 "ocr_fps": args.ocr_fps,
                 "change_threshold": args.change_threshold,
                 "max_idle_seconds": args.max_idle_seconds,
@@ -708,7 +766,7 @@ def worker(args: argparse.Namespace) -> int:
                 "max_size": args.max_size,
                 "max_fps": args.max_fps,
                 "device_size": list(device_size),
-                "ocr_det_max_size": args.ocr_det_max_size,
+                "ocr_max_size": args.ocr_max_size,
                 "ocr_fps": args.ocr_fps,
                 "change_threshold": args.change_threshold,
             },
@@ -732,7 +790,7 @@ def worker(args: argparse.Namespace) -> int:
                     "scrcpy_version": version,
                     "max_size": args.max_size,
                     "max_fps": args.max_fps,
-                    "ocr_det_max_size": args.ocr_det_max_size,
+                    "ocr_max_size": args.ocr_max_size,
                     "frames_decoded": shared.frames_decoded,
                     "last_frame_timestamp_epoch": shared.frame_ts,
                     "screen_state_exists": STATE_PATH.exists(),
@@ -857,8 +915,8 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
         str(args.max_fps),
         "--ocr-fps",
         str(args.ocr_fps),
-        "--ocr-det-max-size",
-        str(args.ocr_det_max_size),
+        "--ocr-max-size",
+        str(args.ocr_max_size),
         "--change-threshold",
         str(args.change_threshold),
         "--max-idle-seconds",
@@ -947,8 +1005,11 @@ def watcher_status_brief() -> dict[str, Any]:
         "screen_state_frame_age_now_ms": result["screen_state_frame_age_now_ms"],
         "frame_id": state.get("frame_id"),
         "ocr_wall_seconds": state.get("ocr_wall_seconds"),
+        "ocr_fast_wall_seconds": state.get("ocr_fast_wall_seconds"),
+        "ocr_frame_size": state.get("ocr_frame_size"),
+        "ocr_full_res_fallback": state.get("ocr_full_res_fallback"),
         "rapidocr_elapse_list": state.get("rapidocr_elapse_list"),
-        "ocr_det_max_size": meta.get("ocr_det_max_size"),
+        "ocr_max_size": meta.get("ocr_max_size"),
         "classification": state.get("classification"),
         "error": meta.get("error"),
     }
@@ -969,11 +1030,13 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--max-size", type=int, default=DEFAULT_MAX_SIZE)
         sp.add_argument("--max-fps", type=float, default=DEFAULT_MAX_FPS)
         sp.add_argument(
-            "--ocr-det-max-size", type=int, default=DEFAULT_OCR_DET_MAX_SIZE
+            "--ocr-max-size", "--ocr-det-max-size",
+            dest="ocr_max_size", type=int, default=DEFAULT_OCR_MAX_SIZE,
+            help="Max longest side of the image passed to OCR (0 disables resizing).",
         )
         sp.add_argument("--ocr-fps", type=float, default=2.0)
         sp.add_argument("--change-threshold", type=float, default=4.0)
-        sp.add_argument("--max-idle-seconds", type=float, default=5.0)
+        sp.add_argument("--max-idle-seconds", type=float, default=1.0)
 
     add_runtime_args(sub.add_parser("start"))
     add_runtime_args(sub.add_parser("_worker"))
