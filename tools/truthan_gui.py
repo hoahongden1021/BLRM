@@ -224,19 +224,24 @@ def ensure_local_server(wait_seconds: float = 8.0) -> dict[str, Any]:
         kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
 
     try:
-        subprocess.Popen(
+        proc = subprocess.Popen(
             [sys.executable, "-u", str(server)],
             **kwargs,
         )
     except OSError as exc:
         raise ToolError(f"Failed to start local server {server}: {exc}") from exc
 
+    # Probe only the game port while waiting. Probing every port on every loop
+    # would create a large number of empty diagnostic connections in server logs.
     deadline = time.time() + wait_seconds
-    after = _server_port_state()
-    while time.time() < deadline and not all(after.values()):
-        time.sleep(0.20)
-        after = _server_port_state()
+    while time.time() < deadline and not _port_open(19000):
+        if proc.poll() is not None:
+            raise ToolError(
+                f"Local server exited early with code {proc.returncode}: {server}"
+            )
+        time.sleep(0.25)
 
+    after = _server_port_state()
     if not all(after.values()):
         raise ToolError(
             f"Local server did not become ready within {wait_seconds:.1f}s. "
@@ -247,6 +252,7 @@ def ensure_local_server(wait_seconds: float = 8.0) -> dict[str, Any]:
         "started": True,
         "already_running": False,
         "server": str(server),
+        "pid": proc.pid,
         "ports": after,
     }
 
