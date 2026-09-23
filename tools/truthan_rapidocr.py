@@ -77,6 +77,20 @@ def _extract(result: Any) -> tuple[list[str], list[float], list[Any], float | No
     ), _plain(elapse_list)
 
 
+def _require_truthan_foreground() -> dict[str, Any]:
+    # Bootstrap OCR must never silently read the Android launcher or another app.
+    from truthan_gui import current_focus
+
+    focus = current_focus()
+    if not focus.get("truthan_foreground", False):
+        lines = focus.get("lines", [])
+        raise RuntimeError(
+            "Tru Than is not foreground; refusing to capture/OCR a different screen. "
+            f"focus={lines}"
+        )
+    return focus
+
+
 def _capture_temp() -> Path:
     # Reuse the verified ADB transport/cleanup implementation.
     from truthan_gui import capture_transient
@@ -125,6 +139,8 @@ def main() -> int:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     try:
+        focus = _require_truthan_foreground()
+
         if owned:
             image_path = _capture_temp()
         else:
@@ -151,6 +167,8 @@ def main() -> int:
         payload = {
             "schema_version": 1,
             "backend": "rapidocr",
+            "truthan_foreground_verified": True,
+            "focus": focus,
             "image_was_transient": owned,
             "item_count": len(items),
             "items": items,
