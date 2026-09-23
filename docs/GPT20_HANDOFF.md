@@ -17,6 +17,8 @@ cannot extract conversation history from an unspecified GPT application.
 
 Before publishing, read back the edited files, check `git diff` and `git status --short`, and remove only temporary files created during this session. The publisher stages every nonignored file, so report any unexplained new file rather than silently including it. The log must list the files actually changed; do not invent start times or test results.
 
+Every GPT-20B commit in this workflow must start with `gpt20:`. The publisher automatically creates a `gpt20: publish session <UTC>` commit and pushes it; use the publisher for normal publication rather than `git push` directly. If the task explicitly requires a separate intermediate commit, name it `gpt20: <specific change>` and still run the publisher at the end.
+
 After writing the log, run from the repository root:
 
 ```bat
