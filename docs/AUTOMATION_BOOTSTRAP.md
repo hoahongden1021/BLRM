@@ -52,6 +52,11 @@ Temporary Qwen3-VL use is allowed for one-time calibration. The long-term fast p
   - `agent`
   - `nearest`
   - `watch`
+- `tools/truthan_rapidocr.py`
+  - captures a transient screenshot when no image is supplied
+  - runs RapidOCR directly in Python
+  - writes ASCII-safe JSON under `runtime/agent/ocr/`
+  - deletes internally captured screenshots after OCR
 
 The runtime-state file can prove that the game session reached the world, but it cannot by itself identify or operate pre-game UI screens.
 
