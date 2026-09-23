@@ -97,6 +97,10 @@ def main() -> int:
     p.add_argument("text", help="Exact OCR text to match.")
     p.add_argument("--ocr", help=f"Screenshot OCR JSON (default: {DEFAULT_OCR}).")
     p.add_argument("--watch", action="store_true", help="Tap using scrcpy watcher screen_state instead.")
+    p.add_argument(
+        "--press-ms", type=int, default=0,
+        help="Hold one stationary touchscreen press for this many milliseconds instead of an instant tap.",
+    )
     p.add_argument("--after-timeout", type=float, default=12.0)
     p.add_argument("--min-score", type=float, default=0.95)
     p.add_argument("--require-state")
@@ -108,8 +112,10 @@ def main() -> int:
         p.error("--watch requires --require-state and --require-substate")
     if args.after_timeout < 0:
         p.error("--after-timeout must be nonnegative")
+    if args.press_ms < 0:
+        p.error("--press-ms must be nonnegative")
 
-    from truthan_gui import current_focus, tap_px
+    from truthan_gui import adb, current_focus, tap_px
 
     focus = current_focus()
     if not focus.get("truthan_foreground", False):
@@ -186,7 +192,19 @@ def main() -> int:
     if args.watch:
         if not current_focus().get("truthan_foreground", False):
             raise RuntimeError("Tru Than lost foreground before OCR-derived tap")
-    result = tap_px(tx, ty)
+    if args.press_ms:
+        # ADB's instant tap sends DOWN and UP together. A stationary swipe
+        # keeps one pointer down briefly without moving outside the OCR box.
+        cp = adb(
+            "shell", "input", "touchscreen", "swipe",
+            str(tx), str(ty), str(tx), str(ty), str(args.press_ms),
+        )
+        result = {
+            "tap_px": [tx, ty], "press_ms": args.press_ms,
+            "stdout": cp.stdout.strip(), "stderr": cp.stderr.strip(),
+        }
+    else:
+        result = tap_px(tx, ty)
     print("TAP_RESULT=" + json.dumps(result, ensure_ascii=True))
     if args.watch:
         after = _wait_for_watch_transition(data, args.after_timeout)
