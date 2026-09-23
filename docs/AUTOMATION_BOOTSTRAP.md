@@ -62,8 +62,8 @@ Temporary Qwen3-VL use is allowed for one-time calibration. The long-term fast p
   - fresh-launches server/client, OCRs, validates one exact target, taps once, OCRs again
   - writes `runtime/agent/reports/last_agent_result.json` and `last_agent_result.txt`
   - avoids ad-hoc temporary scripts and fragile multi-tool report writes
-- `tools/truthan_screen_watch.py` — **EXPERIMENTAL / NOT YET RUNTIME VERIFIED**
-  - uses the matching local scrcpy server in standalone `raw_stream=true` mode
+- `tools/truthan_screen_watch.py` — **PARTIAL**: decode, OCR and coordinate mapping confirmed on the real emulator; lower-latency detector settings still need a local runtime test.
+  - uses the matching local scrcpy server with a dummy-byte ADB-forward handshake and a raw H.264 video payload
   - receives raw H.264 through an ADB forward and decodes frames in memory with PyAV
   - keeps one RapidOCR engine alive instead of reloading it for every screenshot
   - OCRs only when the sampled frame changes enough, plus a periodic idle refresh
@@ -91,17 +91,20 @@ This path has now passed a narrow real-emulator proof:
 - RapidOCR read meaningful Chinese text from the stream;
 - the verified START_MENU signature was classified correctly.
 
-The current remaining issue is stream stability on the Android 15 emulator encoder. The first successful run decoded frames at 2048x918, then the device-side encoder later closed after a capture/encoding error. The watcher therefore now defaults to a conservative 1920 max size and 30 FPS, keeps scrcpy downsize-on-error enabled, and records explicit stream-to-device coordinate scaling so OCR boxes can still produce correct ADB tap coordinates.
+The first successful run decoded frames at 2048x918, then the device-side encoder later closed after a capture/encoding error. The watcher now defaults to 1920 max size and 30 FPS, keeps scrcpy downsize-on-error enabled, and records stream-to-device scaling. A later 1920x862 run decoded 1131 frames and correctly classified START_MENU; a separate 1920x862 run ended after the user closed an associated console, so that closure is not evidence of an encoder failure.
+
+The 1131-frame status showed a 6.39-second OCR pass (4.20 seconds detector, 2.06 seconds recognition). At the time of the status query, the OCR frame was about 10 seconds old. **CANDIDATE speed fix:** the watcher now caps the detector's longest side at 960 with `Det.limit_type=max`, while passing the full stream frame to RapidOCR for text crops and original-coordinate boxes. Tune with `start --ocr-det-max-size N`; the actual speed, Chinese recognition, and sustained stability of this setting remain unverified on the user's emulator. `status --brief` reports current frame age, OCR timing, classification, and frame count. Keep the server console open; query status from a separate PowerShell window if the launch window has focus.
 
 
-The implementation follows scrcpy's documented standalone-server mode: the matching scrcpy server can expose a raw H.264 stream over an ADB forward when audio/control are disabled and `raw_stream=true`. The watcher decodes that stream directly in RAM; it does not screenshot the Windows scrcpy window.
+The watcher sets `send_stream_meta=false`, `send_frame_meta=false`, `send_device_meta=false`, `audio=false`, and `control=false`, while keeping `send_dummy_byte=true` for the ADB-forward handshake. It reads the dummy byte before feeding the H.264 payload to PyAV. Do not enable `raw_stream=true` here: that disables the handshake. Frames are decoded directly in RAM.
 
 Expected test flow:
 
 ```
 py tools\truthan_screen_watch.py doctor
+py tools\truthan_gui.py launch
 py tools\truthan_screen_watch.py start
-py tools\truthan_screen_watch.py status
+py tools\truthan_screen_watch.py status --brief
 py tools\truthan_screen_watch.py stop
 ```
 
