@@ -6,7 +6,11 @@ import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-DEFAULT_STATE = ROOT / "truthan_packet_logs" / "runtime_state.json"
+STATE_CANDIDATES = [
+    ROOT / "server" / "truthan_packet_logs" / "runtime_state.json",
+    ROOT / "truthan_packet_logs" / "runtime_state.json",
+]
+DEFAULT_STATE = next((p for p in STATE_CANDIDATES if p.exists()), STATE_CANDIDATES[0])
 
 
 def load_state(path):
