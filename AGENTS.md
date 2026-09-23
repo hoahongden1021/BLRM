@@ -236,7 +236,7 @@ Long Tinh is useful for architecture, not for proving Tru Than wire protocol.
 
 For local Android/game automation, follow this order and do not skip phases:
 
-1. BOOTSTRAP: launch `com.t4game`, identify the current screen, handle reconnect/login, create a role only when no role exists, select an existing role when present, enter the game, and prove `IN_GAME` from runtime evidence.
+1. BOOTSTRAP: ensure the local Python server is running and ADB reverse rules are active, launch `com.t4game`, identify the current screen, handle reconnect/login, create a role only when no role exists, select an existing role when present, enter the game, and prove `IN_GAME` from runtime evidence.
 2. STATE: expose scene/player/NPC state to the agent.
 3. NAVIGATION: movement/pathing.
 4. INTERACTION: NPC selection/dialogue/menu actions.
