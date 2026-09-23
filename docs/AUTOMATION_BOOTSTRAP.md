@@ -39,7 +39,7 @@ Temporary Qwen3-VL use is allowed for one-time calibration. The long-term fast p
 - `tools/truthan_gui.py`
   - `doctor`
   - `status`
-  - `launch` — now first ensures the local Python server is running, recreates ADB reverse for ports 1888/8089/19000/2888/29000, then launches the client
+  - `launch` — starts a fresh test: force-stops the client, stops any old Tru Than local-server Python process, starts the current local server in a new process, recreates ADB reverse for ports 1888/8089/19000/2888/29000, then launches the client
   - `shot`
   - `observe`
   - `locate`
@@ -74,14 +74,17 @@ Use these logical states only after corresponding runtime evidence is observed:
 
 The Android client cannot complete the local login flow without the local Python server.
 
-For bootstrap work, `py tools\truthan_gui.py launch` is the canonical launcher. It now performs this prerequisite sequence automatically:
+For bootstrap work, `py tools\truthan_gui.py launch` is the canonical fresh-test launcher. It performs this sequence automatically:
 
 1. require an ADB device in `device` state;
-2. detect whether all five local server ports are already listening;
-3. if none are listening, start the current `server/truthan_local_server_v*.py` in a separate process and wait for all ports;
-4. if only some expected ports are occupied, STOP with an explicit conflict instead of starting a second server;
-5. recreate ADB reverse for 1888, 8089, 19000, 2888 and 29000;
-6. launch `com.t4game/j2ab.android.app.J2ABMIDletActivity`.
+2. force-stop `com.t4game` without clearing app data;
+3. find and stop old Python processes running a repository `truthan_local_server_v*.py`;
+4. verify all required server ports are free; if an unrelated process still owns a required port, STOP instead of killing it;
+5. start the current `server/truthan_local_server_v*.py` as a fresh process and wait for all five ports;
+6. recreate ADB reverse for 1888, 8089, 19000, 2888 and 29000;
+7. launch `com.t4game/j2ab.android.app.J2ABMIDletActivity`.
+
+Every new bootstrap test therefore starts with fresh in-memory server state and cannot accidentally reuse an older Tru Than server process.
 
 Do not run OCR/vision bootstrap diagnosis against a client that was launched without these prerequisites.
 
