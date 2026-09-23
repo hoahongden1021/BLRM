@@ -25,4 +25,6 @@ venv/
 *.temp
 *.swp
 *~
-\n# Ephemeral local-agent screenshots/state\n/runtime/agent/\n
+
+# Ephemeral local-agent screenshots/state
+/runtime/agent/
