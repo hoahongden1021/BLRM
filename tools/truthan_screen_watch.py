@@ -29,6 +29,10 @@ DEFAULT_PORT = 27191
 # current device-screen coordinate space for adb input.
 DEFAULT_MAX_SIZE = 1920
 DEFAULT_MAX_FPS = 30.0
+# RapidOCR's default detector scales the short side UP to 736 pixels. On a
+# 1920x862 stream that creates a large detection tensor. Keep the original
+# frame for text recognition/boxes, but bound only the detector input.
+DEFAULT_OCR_DET_MAX_SIZE = 960
 REMOTE_SERVER = "/data/local/tmp/truthan-scrcpy-server.jar"
 PACKAGE = "com.t4game"
 
@@ -471,6 +475,7 @@ class SharedFrame:
         self.frame_ts = 0.0
         self.frames_decoded = 0
         self.decode_error: str | None = None
+        self.ocr_error: str | None = None
         self.done = False
 
     def put(self, frame: Any) -> None:
@@ -513,6 +518,7 @@ def _ocr_loop(
     shared: SharedFrame,
     *,
     device_size: tuple[int, int],
+    ocr_det_max_size: int,
     ocr_fps: float,
     change_threshold: float,
     max_idle_seconds: float,
@@ -520,7 +526,10 @@ def _ocr_loop(
     from rapidocr import RapidOCR  # type: ignore
     from truthan_rapidocr import _extract, classify_screen
 
-    engine = RapidOCR()
+    engine = RapidOCR(params={
+        "Det.limit_type": "max",
+        "Det.limit_side_len": ocr_det_max_size,
+    })
     min_interval = 1.0 / max(ocr_fps, 0.1)
     last_ocr_start = 0.0
     last_ocr_done = 0.0
@@ -584,6 +593,7 @@ def _ocr_loop(
                 device_size[0] / stream_size[0],
                 device_size[1] / stream_size[1],
             ],
+            "ocr_det_max_size": ocr_det_max_size,
             "screen_change_score": delta,
             "ocr_wall_seconds": ocr_elapsed,
             "rapidocr_elapse": rapid_elapsed,
@@ -597,6 +607,13 @@ def _ocr_loop(
         last_sig = sig
         last_frame_id = frame_id
         last_ocr_done = time.time()
+
+
+def _ocr_loop_guarded(shared: SharedFrame, **kwargs: Any) -> None:
+    try:
+        _ocr_loop(shared, **kwargs)
+    except Exception as exc:
+        shared.ocr_error = f"{type(exc).__name__}: {exc}"
 
 
 def _write_status(
@@ -668,10 +685,11 @@ def worker(args: argparse.Namespace) -> int:
             daemon=True,
         )
         ocr_thread = threading.Thread(
-            target=_ocr_loop,
+            target=_ocr_loop_guarded,
             args=(shared,),
             kwargs={
                 "device_size": device_size,
+                "ocr_det_max_size": args.ocr_det_max_size,
                 "ocr_fps": args.ocr_fps,
                 "change_threshold": args.change_threshold,
                 "max_idle_seconds": args.max_idle_seconds,
@@ -690,6 +708,7 @@ def worker(args: argparse.Namespace) -> int:
                 "max_size": args.max_size,
                 "max_fps": args.max_fps,
                 "device_size": list(device_size),
+                "ocr_det_max_size": args.ocr_det_max_size,
                 "ocr_fps": args.ocr_fps,
                 "change_threshold": args.change_threshold,
             },
@@ -698,6 +717,10 @@ def worker(args: argparse.Namespace) -> int:
         while not STOP_PATH.exists():
             if shared.decode_error:
                 raise WatchError(shared.decode_error)
+            if shared.ocr_error:
+                raise WatchError(f"OCR worker failed: {shared.ocr_error}")
+            if not ocr_thread.is_alive():
+                raise WatchError("OCR worker stopped unexpectedly")
             if server_proc.poll() is not None:
                 raise WatchError(
                     f"scrcpy server exited with code {server_proc.returncode}"
@@ -707,6 +730,9 @@ def worker(args: argparse.Namespace) -> int:
                 port=args.port,
                 extra={
                     "scrcpy_version": version,
+                    "max_size": args.max_size,
+                    "max_fps": args.max_fps,
+                    "ocr_det_max_size": args.ocr_det_max_size,
                     "frames_decoded": shared.frames_decoded,
                     "last_frame_timestamp_epoch": shared.frame_ts,
                     "screen_state_exists": STATE_PATH.exists(),
@@ -831,6 +857,8 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
         str(args.max_fps),
         "--ocr-fps",
         str(args.ocr_fps),
+        "--ocr-det-max-size",
+        str(args.ocr_det_max_size),
         "--change-threshold",
         str(args.change_threshold),
         "--max-idle-seconds",
@@ -893,11 +921,36 @@ def watcher_status() -> dict[str, Any]:
     pid = _load_pid()
     meta = _read_json(STATUS_PATH)
     state = _read_json(STATE_PATH)
+    frame_age_now_ms = None
+    if state is not None and isinstance(state.get("frame_timestamp_epoch"), (int, float)):
+        frame_age_now_ms = max(
+            0.0, (time.time() - state["frame_timestamp_epoch"]) * 1000.0
+        )
     return {
         "running": bool(pid and _pid_alive(pid)),
         "pid": pid,
         "status": meta,
+        "screen_state_frame_age_now_ms": frame_age_now_ms,
         "screen_state": state,
+    }
+
+
+def watcher_status_brief() -> dict[str, Any]:
+    result = watcher_status()
+    meta = result["status"] or {}
+    state = result["screen_state"] or {}
+    return {
+        "running": result["running"],
+        "status": meta.get("status"),
+        "pid": result["pid"],
+        "frames_decoded": meta.get("frames_decoded"),
+        "screen_state_frame_age_now_ms": result["screen_state_frame_age_now_ms"],
+        "frame_id": state.get("frame_id"),
+        "ocr_wall_seconds": state.get("ocr_wall_seconds"),
+        "rapidocr_elapse_list": state.get("rapidocr_elapse_list"),
+        "ocr_det_max_size": meta.get("ocr_det_max_size"),
+        "classification": state.get("classification"),
+        "error": meta.get("error"),
     }
 
 
@@ -908,13 +961,16 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="command", required=True)
 
     sub.add_parser("doctor")
-    sub.add_parser("status")
+    sub.add_parser("status").add_argument("--brief", action="store_true")
     sub.add_parser("stop")
 
     def add_runtime_args(sp: argparse.ArgumentParser) -> None:
         sp.add_argument("--port", type=int, default=DEFAULT_PORT)
         sp.add_argument("--max-size", type=int, default=DEFAULT_MAX_SIZE)
         sp.add_argument("--max-fps", type=float, default=DEFAULT_MAX_FPS)
+        sp.add_argument(
+            "--ocr-det-max-size", type=int, default=DEFAULT_OCR_DET_MAX_SIZE
+        )
         sp.add_argument("--ocr-fps", type=float, default=2.0)
         sp.add_argument("--change-threshold", type=float, default=4.0)
         sp.add_argument("--max-idle-seconds", type=float, default=5.0)
@@ -932,7 +988,8 @@ def main() -> int:
         elif args.command == "start":
             print(json.dumps(start_watcher(args), ensure_ascii=False, indent=2))
         elif args.command == "status":
-            print(json.dumps(watcher_status(), ensure_ascii=False, indent=2))
+            result = watcher_status_brief() if args.brief else watcher_status()
+            print(json.dumps(result, ensure_ascii=False, indent=2))
         elif args.command == "stop":
             print(json.dumps(stop_watcher(), ensure_ascii=False, indent=2))
         elif args.command == "_worker":
