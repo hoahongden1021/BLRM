@@ -106,6 +106,14 @@ Use these logical states only after corresponding runtime evidence is observed:
 
 The Android client cannot complete the local login flow without the local Python server.
 
+For every live runtime test, the first executable step is a fresh launch:
+
+```
+py tools\truthan_gui.py launch
+```
+
+Do not preserve an old runtime between AI test tasks. The launcher is responsible for replacing the old Tru Than server process and old client process with fresh instances before OCR or automation starts.
+
 For bootstrap work, `py tools\truthan_gui.py launch` is the canonical fresh-test launcher. It performs this sequence automatically:
 
 1. require an ADB device in `device` state;
