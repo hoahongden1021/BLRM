@@ -45,6 +45,46 @@ def _codepoints(text: str) -> list[str]:
     return [f"U+{ord(ch):04X}" for ch in text]
 
 
+def _normalize_text(text: str) -> str:
+    return "".join(ch for ch in text.strip() if not ch.isspace())
+
+
+def classify_screen(texts: list[str]) -> dict[str, Any]:
+    normalized = [_normalize_text(t) for t in texts if t]
+    joined = "\n".join(normalized)
+
+    # VERIFIED from real-client OCR capture on 2026-09-23.
+    # Start/entry menu shows these controls together.
+    start_menu_markers = ("开始游戏", "修复游戏", "退出游戏")
+    if all(marker in joined for marker in start_menu_markers):
+        return {
+            "state": "LOGIN_OR_ENTRY",
+            "substate": "START_MENU",
+            "confidence": 1.0,
+            "evidence": [m for m in start_menu_markers if m in joined],
+            "basis": "VERIFIED_OCR_SIGNATURE",
+        }
+
+    # Previously observed real-client reconnect/network-error wording.
+    if "网络故障" in joined:
+        return {
+            "state": "NETWORK_ERROR",
+            "substate": None,
+            "confidence": 1.0,
+            "evidence": ["网络故障"],
+            "basis": "VERIFIED_OCR_SIGNATURE",
+        }
+
+    # Do not infer IN_GAME from menu text. IN_GAME requires runtime-state proof.
+    return {
+        "state": "UNKNOWN_SCREEN",
+        "substate": None,
+        "confidence": 0.0,
+        "evidence": normalized,
+        "basis": "NO_VERIFIED_SIGNATURE_MATCH",
+    }
+
+
 def _extract(result: Any) -> tuple[list[str], list[float], list[Any], float | None, Any]:
     # RapidOCR current API: RapidOCROutput.txts / scores / boxes / elapse.
     txts = getattr(result, "txts", None)
@@ -164,14 +204,17 @@ def main() -> int:
                 "box": box,
             })
 
+        classification = classify_screen(txts)
+
         payload = {
-            "schema_version": 1,
+            "schema_version": 2,
             "backend": "rapidocr",
             "truthan_foreground_verified": True,
             "focus": focus,
             "image_was_transient": owned,
             "item_count": len(items),
             "items": items,
+            "classification": classification,
             "rapidocr_elapse": elapse,
             "rapidocr_elapse_list": elapse_list,
             "wall_time_seconds": wall_time,
@@ -188,6 +231,10 @@ def main() -> int:
         print(f"OUTPUT={output_path}")
         print(f"ITEM_COUNT={verify.get('item_count', 0)}")
         print(f"WALL_TIME_SECONDS={verify.get('wall_time_seconds')}")
+        classification = verify.get("classification", {})
+        print(f"SCREEN_STATE={classification.get('state', 'UNKNOWN_SCREEN')}")
+        print(f"SCREEN_SUBSTATE={classification.get('substate')}")
+        print(f"SCREEN_BASIS={classification.get('basis')}")
         for idx, item in enumerate(verify.get("items", [])):
             print(f"ITEM={idx}")
             print(f"TEXT_ASCII={ascii(item.get('text', ''))}")
