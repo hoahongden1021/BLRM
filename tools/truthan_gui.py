@@ -216,7 +216,97 @@ def _stop_existing_local_servers(wait_seconds: float = 5.0) -> list[int]:
         "$ids=@();"
         "Get-CimInstance Win32_Process | ForEach-Object {"
         "  $p=$_;"
-        "  if($p.Name -notmatch '^(python|pythonw|py)(\\.exe)?
+        "  if($p.Name -notmatch '^(python|pythonw|py)(\\.exe)?$'){ return };"
+        "  if(-not $p.CommandLine){ return };"
+        "  foreach($n in $names){"
+        "    if($p.CommandLine -like ('*'+$n+'*')){"
+        "      $ids += [int]$p.ProcessId;"
+        "      break"
+        "    }"
+        "  }"
+        "};"
+        "$ids=@($ids | Sort-Object -Unique);"
+        "foreach($procId in $ids){"
+        "  Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue"
+        "};"
+        "$ids"
+    )
+    cp = run(
+        ["powershell.exe", "-NoLogo", "-NoProfile", "-Command", ps],
+        timeout=30,
+        check=False,
+    )
+    if cp.returncode != 0:
+        raise ToolError(
+            "Failed while stopping old Tru Than server process(es).\n"
+            f"STDOUT:\n{cp.stdout}\nSTDERR:\n{cp.stderr}"
+        )
+
+    stopped = []
+    for line in cp.stdout.splitlines():
+        line = line.strip()
+        if line.isdigit():
+            stopped.append(int(line))
+
+    deadline = time.time() + wait_seconds
+    ports = _server_port_state()
+    while time.time() < deadline and any(ports.values()):
+        time.sleep(0.20)
+        ports = _server_port_state()
+
+    if any(ports.values()):
+        raise ToolError(
+            "Required Tru Than port(s) are still occupied after stopping known "
+            f"old server process(es). stopped_pids={stopped} ports={ports}"
+        )
+    return stopped
+
+
+def restart_local_server(wait_seconds: float = 8.0) -> dict[str, Any]:
+    """Always stop the old local server and start a fresh server process."""
+    before = _server_port_state()
+    stopped = _stop_existing_local_servers()
+
+    server = _local_server_path()
+    kwargs: dict[str, Any] = {
+        "cwd": str(server.parent),
+        "env": os.environ.copy(),
+    }
+    if os.name == "nt":
+        kwargs["creationflags"] = subprocess.CREATE_NEW_CONSOLE
+
+    try:
+        proc = subprocess.Popen(
+            [sys.executable, "-u", str(server)],
+            **kwargs,
+        )
+    except OSError as exc:
+        raise ToolError(f"Failed to start local server {server}: {exc}") from exc
+
+    deadline = time.time() + wait_seconds
+    while time.time() < deadline and not _port_open(19000):
+        if proc.poll() is not None:
+            raise ToolError(
+                f"Local server exited early with code {proc.returncode}: {server}"
+            )
+        time.sleep(0.25)
+
+    after = _server_port_state()
+    if not all(after.values()):
+        raise ToolError(
+            f"Fresh local server did not become ready within {wait_seconds:.1f}s. "
+            f"server={server} ports={after}"
+        )
+
+    return {
+        "restarted": True,
+        "server": str(server),
+        "stopped_pids": stopped,
+        "pid": proc.pid,
+        "ports_before": before,
+        "ports": after,
+    }
+
 
 def ensure_adb_reverse() -> dict[str, str]:
     """Recreate all local TCP reverse rules required by the Tru Than client."""
