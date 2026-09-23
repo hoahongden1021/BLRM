@@ -110,13 +110,13 @@ py tools\truthan_screen_watch.py status --brief
 py tools\truthan_screen_watch.py stop
 ```
 
-The existing screenshot-based `truthan_ocr_tap.py` uses box coordinates as native ADB coordinates. Do **not** pass the watcher's `screen_state.json` through its old `--ocr` option: those boxes are in stream coordinates. The added `--watch` mode reads the watcher state, requires the live process, fresh frame (<=2.5 seconds), verified classification, exact text and sufficient score, independently checks the box-to-device mapping, and waits for a subsequent state transition. **VERIFIED for one real-emulator START_MENU -> ACCOUNT_LOGIN transition (2026-09-23):**
+The existing screenshot-based `truthan_ocr_tap.py` uses box coordinates as native ADB coordinates. Do **not** pass the watcher's `screen_state.json` through its old `--ocr` option: those boxes are in stream coordinates. The added `--watch` mode reads the watcher state, requires the live process, waits up to 12 seconds for a fresh frame (<=2.5 seconds, with a 0.75-second safety margin before the tap), verified classification, exact text and sufficient score, independently checks the box-to-device mapping, and waits for a subsequent state transition. **VERIFIED for one real-emulator START_MENU -> ACCOUNT_LOGIN transition (2026-09-23):**
 
 ```
 py tools\truthan_ocr_tap.py "开始游戏" --watch --require-state LOGIN_OR_ENTRY --require-substate START_MENU
 ```
 
-In that run, `WATCH_FRAME_AGE_SECONDS=1.554`, `TARGET_SCORE=0.999900`, OCR stream box `[[1404,322],[1704,322],[1704,414],[1404,414]]`, and ADB tap `(2422,574)` were reported. The watcher then reported `transition_observed=true`, `frame_id=312`, and `LOGIN_OR_ENTRY / ACCOUNT_LOGIN` with the verified `账号:` and `开始游戏` signature. This confirms the single observed entry-screen transition, not account submission or complete bootstrap. The next input/control on ACCOUNT_LOGIN remains UNKNOWN until its current OCR items are inspected.
+In that run, `WATCH_FRAME_AGE_SECONDS=1.554`, `TARGET_SCORE=0.999900`, OCR stream box `[[1404,322],[1704,322],[1704,414],[1404,414]]`, and ADB tap `(2422,574)` were reported. The watcher then reported `transition_observed=true`, `frame_id=312`, and `LOGIN_OR_ENTRY / ACCOUNT_LOGIN` with the verified `账号:` and `开始游戏` signature. This confirms the single observed entry-screen transition, not account submission or complete bootstrap. A later invocation refused a START_MENU tap because the cached OCR frame was 4.886 seconds old, exceeding the 2.5-second freshness limit. The tool now waits for the next fresh watcher state rather than relaxing the limit; the wait behavior has passed static/mocked checks but is **CANDIDATE** until retested on the emulator. The next input/control on ACCOUNT_LOGIN remains UNKNOWN until its current OCR items are inspected.
 
 When inspecting Chinese OCR strings from Windows PowerShell, read `runtime/agent/screen_state.json` directly with `Get-Content -Raw -Encoding UTF8 | ConvertFrom-Json`; one piped `status | ConvertFrom-Json` comparison returned no exact Chinese match, while reading the JSON file returned all eight OCR items.
 
