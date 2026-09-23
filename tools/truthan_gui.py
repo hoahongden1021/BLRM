@@ -342,7 +342,18 @@ def ensure_adb_reverse() -> dict[str, str]:
     return result
 
 
+def cleanup_legacy_agent_files() -> None:
+    for legacy in (ROOT / ".agent_screen.png", ROOT / ".agent_vision.json"):
+        try:
+            legacy.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def prepare_local_runtime() -> dict[str, Any]:
+    # Remove files produced by older bridge versions from the repository root.
+    cleanup_legacy_agent_files()
+
     # Validate ADB before touching the local server so failures are explicit.
     state = adb("get-state").stdout.strip()
     if state != "device":
