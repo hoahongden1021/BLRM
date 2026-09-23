@@ -126,6 +126,35 @@ def _scrcpy_exe() -> Path | None:
     found = shutil.which("scrcpy")
     if found:
         return Path(found).resolve()
+
+    # WinGet portable packages are not always added to the current shell PATH
+    # immediately. Discover the official Genymobile.scrcpy package directly.
+    local_appdata = os.environ.get("LOCALAPPDATA")
+    if local_appdata:
+        base = Path(local_appdata)
+
+        # WinGet links directory (when an alias/link is created).
+        for candidate in (
+            base / "Microsoft" / "WinGet" / "Links" / "scrcpy.exe",
+            base / "Microsoft" / "WindowsApps" / "scrcpy.exe",
+        ):
+            if candidate.exists():
+                return candidate.resolve()
+
+        packages = base / "Microsoft" / "WinGet" / "Packages"
+        if packages.exists():
+            candidates = sorted(
+                (
+                    p
+                    for p in packages.glob("Genymobile.scrcpy_*")
+                    for p in p.rglob("scrcpy.exe")
+                    if p.is_file()
+                ),
+                key=lambda p: str(p).lower(),
+            )
+            if candidates:
+                return candidates[-1].resolve()
+
     return None
 
 
