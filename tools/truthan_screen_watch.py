@@ -24,10 +24,11 @@ STOP_PATH = WATCH_DIR / "stop.flag"
 LOG_PATH = WATCH_DIR / "watcher.log"
 
 DEFAULT_PORT = 27191
-# Keep native stream coordinates by default so OCR boxes remain directly usable
-# for adb input tap. Downscaling can be added later only with explicit coordinate
-# remapping.
-DEFAULT_MAX_SIZE = 0
+# Android Emulator's H.264 encoder is unstable at the native 2992x1344 capture.
+# Stream at a conservative size and explicitly remap OCR coordinates back to the
+# current device-screen coordinate space for adb input.
+DEFAULT_MAX_SIZE = 1920
+DEFAULT_MAX_FPS = 30.0
 REMOTE_SERVER = "/data/local/tmp/truthan-scrcpy-server.jar"
 PACKAGE = "com.t4game"
 
@@ -269,7 +270,17 @@ def _kill_old_raw_scrcpy_servers() -> list[int]:
     cp = _adb("shell", "ps", "-A", "-o", "PID,ARGS", check=False)
     killed: list[int] = []
     for line in cp.stdout.splitlines():
-        if "com.genymobile.scrcpy.Server" not in line or "raw_stream=true" not in line:
+        if "com.genymobile.scrcpy.Server" not in line:
+            continue
+        is_our_stream = (
+            "raw_stream=true" in line
+            or (
+                "send_stream_meta=false" in line
+                and "send_device_meta=false" in line
+                and "control=false" in line
+            )
+        )
+        if not is_our_stream:
             continue
         m = re.match(r"\s*(\d+)\s+", line)
         if not m:
@@ -280,12 +291,36 @@ def _kill_old_raw_scrcpy_servers() -> list[int]:
     return killed
 
 
+def _device_screen_size() -> tuple[int, int]:
+    """Read one in-memory screencap only to calibrate stream->adb coordinates."""
+    try:
+        cp = subprocess.run(
+            ["adb", "exec-out", "screencap", "-p"],
+            cwd=str(ROOT),
+            capture_output=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise WatchError(f"failed to capture device size: {exc}") from exc
+
+    data = cp.stdout
+    if cp.returncode != 0 or len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise WatchError(
+            "could not determine current device screen size from screencap"
+        )
+    import struct
+    width, height = struct.unpack(">II", data[16:24])
+    return int(width), int(height)
+
+
 def _launch_scrcpy_server(
     server_path: Path,
     version: str,
     *,
     port: int,
     max_size: int,
+    max_fps: float,
 ) -> tuple[subprocess.Popen[bytes], socket.socket]:
     _kill_old_raw_scrcpy_servers()
 
@@ -320,6 +355,9 @@ def _launch_scrcpy_server(
     ]
     if max_size > 0:
         cmd.append(f"max_size={max_size}")
+    if max_fps > 0:
+        cmd.append(f"max_fps={max_fps}")
+    cmd.append("downsize_on_error=true")
 
     WATCH_DIR.mkdir(parents=True, exist_ok=True)
     log_fp = LOG_PATH.open("ab", buffering=0)
@@ -407,6 +445,24 @@ def _item_center(box: Any) -> list[float] | None:
     return [sum(xs) / 4.0, sum(ys) / 4.0]
 
 
+def _map_stream_center_to_device(
+    center: list[float] | None,
+    *,
+    stream_size: tuple[int, int],
+    device_size: tuple[int, int],
+) -> list[float] | None:
+    if center is None:
+        return None
+    sw, sh = stream_size
+    dw, dh = device_size
+    if sw <= 0 or sh <= 0:
+        return None
+    return [
+        center[0] * dw / sw,
+        center[1] * dh / sh,
+    ]
+
+
 class SharedFrame:
     def __init__(self) -> None:
         self.lock = threading.Lock()
@@ -456,6 +512,7 @@ def _decode_loop(sock: socket.socket, shared: SharedFrame) -> None:
 def _ocr_loop(
     shared: SharedFrame,
     *,
+    device_size: tuple[int, int],
     ocr_fps: float,
     change_threshold: float,
     max_idle_seconds: float,
@@ -497,13 +554,20 @@ def _ocr_loop(
         txts, scores, boxes, rapid_elapsed, rapid_elapsed_list = _extract(result)
         classification = classify_screen(txts)
 
+        stream_size = (int(frame.shape[1]), int(frame.shape[0]))
         items = []
         for text, score, box in zip(txts, scores, boxes):
+            center = _item_center(box)
             items.append({
                 "text": text,
                 "score": score,
                 "box": box,
-                "center": _item_center(box),
+                "center": center,
+                "tap_center": _map_stream_center_to_device(
+                    center,
+                    stream_size=stream_size,
+                    device_size=device_size,
+                ),
             })
 
         payload = {
@@ -514,7 +578,12 @@ def _ocr_loop(
             "frame_id": frame_id,
             "frame_timestamp_epoch": frame_ts,
             "frame_age_ms": max(0.0, (time.time() - frame_ts) * 1000.0),
-            "frame_size": [int(frame.shape[1]), int(frame.shape[0])],
+            "frame_size": [stream_size[0], stream_size[1]],
+            "device_size": [device_size[0], device_size[1]],
+            "stream_to_device_scale": [
+                device_size[0] / stream_size[0],
+                device_size[1] / stream_size[1],
+            ],
             "screen_change_score": delta,
             "ocr_wall_seconds": ocr_elapsed,
             "rapidocr_elapse": rapid_elapsed,
@@ -582,11 +651,14 @@ def worker(args: argparse.Namespace) -> int:
             },
         )
 
+        device_size = _device_screen_size()
+
         server_proc, sock = _launch_scrcpy_server(
             server,
             version,
             port=args.port,
             max_size=args.max_size,
+            max_fps=args.max_fps,
         )
 
         decoder = threading.Thread(
@@ -599,6 +671,7 @@ def worker(args: argparse.Namespace) -> int:
             target=_ocr_loop,
             args=(shared,),
             kwargs={
+                "device_size": device_size,
                 "ocr_fps": args.ocr_fps,
                 "change_threshold": args.change_threshold,
                 "max_idle_seconds": args.max_idle_seconds,
@@ -615,6 +688,8 @@ def worker(args: argparse.Namespace) -> int:
             extra={
                 "scrcpy_version": version,
                 "max_size": args.max_size,
+                "max_fps": args.max_fps,
+                "device_size": list(device_size),
                 "ocr_fps": args.ocr_fps,
                 "change_threshold": args.change_threshold,
             },
@@ -752,6 +827,8 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
         str(args.port),
         "--max-size",
         str(args.max_size),
+        "--max-fps",
+        str(args.max_fps),
         "--ocr-fps",
         str(args.ocr_fps),
         "--change-threshold",
@@ -837,6 +914,7 @@ def build_parser() -> argparse.ArgumentParser:
     def add_runtime_args(sp: argparse.ArgumentParser) -> None:
         sp.add_argument("--port", type=int, default=DEFAULT_PORT)
         sp.add_argument("--max-size", type=int, default=DEFAULT_MAX_SIZE)
+        sp.add_argument("--max-fps", type=float, default=DEFAULT_MAX_FPS)
         sp.add_argument("--ocr-fps", type=float, default=2.0)
         sp.add_argument("--change-threshold", type=float, default=4.0)
         sp.add_argument("--max-idle-seconds", type=float, default=5.0)
