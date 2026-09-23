@@ -131,8 +131,45 @@ def _new_packet_headers(cursor: dict[Path, int], start_epoch: float) -> list[dic
     return events[-40:]
 
 
+def _game_pid() -> str | None:
+    from truthan_gui import adb
+
+    try:
+        cp = adb("shell", "pidof", "com.t4game", timeout=5, check=False)
+    except Exception:
+        return None
+    first = cp.stdout.split()
+    return first[0] if first and first[0].isdigit() else None
+
+
+def _logcat_error_types(pid: str | None, start_epoch: float) -> dict[str, Any]:
+    if pid is None:
+        return {"error_types": [], "fatal_count": 0, "available": False}
+    from truthan_gui import adb
+
+    try:
+        cp = adb("logcat", "-d", "-v", "epoch", f"--pid={pid}", "-s",
+                 "AndroidRuntime:E", "System.err:W", "System.out:I", timeout=20, check=False)
+    except Exception:
+        return {"error_types": [], "fatal_count": 0, "available": False}
+    if cp.returncode != 0:
+        return {"error_types": [], "fatal_count": 0, "available": False}
+    errors: set[str] = set()
+    fatal_count = 0
+    for line in cp.stdout.splitlines():
+        stamp = re.match(r"^\s*(\d+\.\d+)", line)
+        if not stamp or float(stamp[1]) < start_epoch - 1:
+            continue
+        if "FATAL EXCEPTION" in line or "[FATAL ERROR]" in line:
+            fatal_count += 1
+        errors.update(re.findall(r"\b[A-Za-z][\w.$]*(?:Exception|Error)\b", line))
+    # Report only exception classes, never raw log lines containing login data.
+    return {"error_types": sorted(errors)[:20], "fatal_count": fatal_count, "available": True}
+
+
 def _trace_login_after_tap(before: dict[str, Any], timeout: float,
-                           cursor: dict[Path, int], start_epoch: float) -> dict[str, Any]:
+                           cursor: dict[Path, int], start_epoch: float,
+                           android_pid: str | None) -> dict[str, Any]:
     from truthan_screen_watch import STATE_PATH, _read_json
 
     initial = before.get("classification") or {}
@@ -176,6 +213,9 @@ def _trace_login_after_tap(before: dict[str, Any], timeout: float,
         "screen_events": screen_events[-20:],
         "connection_events": connection_events[-20:],
         "packet_headers": _new_packet_headers(cursor, start_epoch),
+        "android_pid_before": android_pid,
+        "android_pid_after": _game_pid(),
+        "logcat": _logcat_error_types(android_pid, start_epoch),
     }
 
 
@@ -286,6 +326,7 @@ def main() -> int:
         if not current_focus().get("truthan_foreground", False):
             raise RuntimeError("Tru Than lost foreground before OCR-derived tap")
     cursor = _packet_cursor() if args.trace_login else {}
+    android_pid = _game_pid() if args.trace_login else None
     start_epoch = time.time()
     if args.press_ms:
         # ADB's instant tap sends DOWN and UP together. A stationary swipe
@@ -302,7 +343,8 @@ def main() -> int:
         result = tap_px(tx, ty)
     print("TAP_RESULT=" + json.dumps(result, ensure_ascii=True))
     if args.watch:
-        after = (_trace_login_after_tap(data, max(20.0, args.after_timeout), cursor, start_epoch)
+        after = (_trace_login_after_tap(data, max(20.0, args.after_timeout), cursor, start_epoch,
+                                        android_pid)
                  if args.trace_login else _wait_for_watch_transition(data, args.after_timeout))
         print("AFTER=" + json.dumps(after, ensure_ascii=True))
         return 0 if after["transition_observed"] else 3
