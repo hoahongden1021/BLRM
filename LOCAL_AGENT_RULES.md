@@ -424,7 +424,22 @@ Do not continue based on hallucinated conversation text.
 
 ---
 
-## 18. Final check before responding
+## 18. OpenCode tool-call syntax discipline
+
+When invoking an OpenCode/tool action:
+
+- the tool-call payload must contain only the tool arguments;
+- never prepend reasoning or prose such as "I will run..." inside the raw tool call;
+- do not append commentary after the JSON/tool payload;
+- prefer direct repository commands over temporary wrapper scripts;
+- do not create a temporary `.py` file merely to execute a simple existing CLI command;
+- for OCR-derived taps, prefer the repository helper:
+  `py tools\truthan_ocr_tap.py "<exact text>" ...`
+  instead of constructing ad-hoc Python or PowerShell one-liners.
+
+If a tool call fails to parse, correct the call syntax only. Do not change project code to work around a malformed tool-call payload.
+
+## 19. Final check before responding
 
 Before giving the final answer, verify:
 
