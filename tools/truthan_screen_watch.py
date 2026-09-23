@@ -29,9 +29,9 @@ DEFAULT_PORT = 27191
 # current device-screen coordinate space for adb input.
 DEFAULT_MAX_SIZE = 1920
 DEFAULT_MAX_FPS = 30.0
-# RapidOCR's default detector scales the short side UP to 736 pixels. On a
-# 1920x862 stream that creates a large detection tensor. Keep the original
-# frame for text recognition/boxes, but bound only the detector input.
+# RapidOCR's default detector has a MINIMUM short side of 736 pixels, so it
+# keeps the 1920x862 stream at full size for detection. Keep the original frame
+# for text recognition/boxes, but bound only the detector input.
 DEFAULT_OCR_DET_MAX_SIZE = 960
 REMOTE_SERVER = "/data/local/tmp/truthan-scrcpy-server.jar"
 PACKAGE = "com.t4game"
