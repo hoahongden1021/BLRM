@@ -345,6 +345,25 @@ Refactoring must preserve observable behavior unless the task explicitly targets
 
 ## 15. Runtime verification
 
+### Mandatory fresh runtime preflight
+
+Before any task that reads, tests, or automates the live Tru Than client/server runtime, run:
+
+`py tools\truthan_gui.py launch`
+
+Do this at the start of the runtime test even when a previous server/game instance exists.
+
+Expected behavior:
+1. stop an old repository Tru Than Python server if present;
+2. start the current local server fresh;
+3. recreate required ADB reverse rules;
+4. force-stop an existing `com.t4game` client if present;
+5. launch the client fresh.
+
+After launch, verify the command result before continuing. Do not replace this with an instruction such as "keep the current game/server running". Do not OCR or automate whatever happens to be on screen without this preflight.
+
+Exception: source-only/static analysis tasks that do not use the live emulator/server.
+
 Static source analysis alone does NOT make runtime behavior VERIFIED.
 
 Use VERIFIED only when the project's evidence rules are satisfied.
