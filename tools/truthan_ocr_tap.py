@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -10,6 +11,11 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OCR = ROOT / "runtime" / "agent" / "ocr" / "rapidocr_latest.json"
+SERVER_LOGS = ROOT / "server" / "truthan_packet_logs"
+PACKET_HEADER = re.compile(
+    r"^\[(?P<time>\d\d:\d\d:\d\d)\] (?P<direction>RX|TX)-FRAME "
+    r"\d+ bytes port=(?P<port>19000|29000) cmd=(?P<cmd>-?\d+)\b"
+)
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8", errors="strict")
@@ -90,6 +96,89 @@ def _wait_for_watch_transition(before: dict[str, Any], after_timeout: float) -> 
     }
 
 
+def _packet_files() -> list[Path]:
+    return sorted(
+        [*SERVER_LOGS.glob("*_p19000_*.log"), *SERVER_LOGS.glob("*_p29000_*.log")]
+    )
+
+
+def _packet_cursor() -> dict[Path, int]:
+    return {path: path.stat().st_size for path in _packet_files()}
+
+
+def _new_packet_headers(cursor: dict[Path, int], start_epoch: float) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for path in _packet_files():
+        try:
+            if path not in cursor and path.stat().st_mtime < start_epoch - 2:
+                continue
+            with path.open("r", encoding="utf-8", errors="replace") as stream:
+                stream.seek(cursor.get(path, 0))
+                for line in stream:
+                    match = PACKET_HEADER.match(line)
+                    if match:
+                        events.append({
+                            "time": match["time"],
+                            "port": int(match["port"]),
+                            "direction": match["direction"],
+                            "cmd": int(match["cmd"]),
+                        })
+                    elif line.startswith("CLOSED "):
+                        events.append({"port": 19000 if "_p19000_" in path.name else 29000,
+                                       "close": line.strip()})
+        except OSError:
+            continue
+    return events[-40:]
+
+
+def _trace_login_after_tap(before: dict[str, Any], timeout: float,
+                           cursor: dict[Path, int], start_epoch: float) -> dict[str, Any]:
+    from truthan_screen_watch import STATE_PATH, _read_json
+
+    initial = before.get("classification") or {}
+    initial_key = (initial.get("state"), initial.get("substate"))
+    last_key = initial_key
+    first_transition = None
+    screen_events: list[dict[str, Any]] = []
+    connection_events: list[dict[str, Any]] = []
+    last_connected = None
+    last = before
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() <= deadline:
+        elapsed = round(time.time() - start_epoch, 2)
+        current = _read_json(STATE_PATH)
+        if current and current.get("watcher_pid") == before.get("watcher_pid"):
+            last = current
+            classification = current.get("classification") or {}
+            key = (classification.get("state"), classification.get("substate"))
+            if int(current.get("frame_id") or 0) > int(before.get("frame_id") or 0) and key != last_key:
+                screen_events.append({"elapsed_s": elapsed, "frame_id": current.get("frame_id"),
+                                      "state": key[0], "substate": key[1]})
+                if key != initial_key and first_transition is None:
+                    first_transition = current.get("frame_id")
+                last_key = key
+
+        status = _read_json(SERVER_LOGS / "runtime_state.json")
+        if status and "game_connected" in status:
+            connected = bool(status["game_connected"])
+            if connected != last_connected:
+                connection_events.append({"elapsed_s": elapsed, "game_connected": connected,
+                                          "updated_unix_ms": status.get("updated_unix_ms")})
+                last_connected = connected
+        time.sleep(0.2)
+
+    return {
+        "transition_observed": first_transition is not None,
+        "first_transition_frame_id": first_transition,
+        "frame_id": last.get("frame_id"),
+        "classification": last.get("classification"),
+        "screen_events": screen_events[-20:],
+        "connection_events": connection_events[-20:],
+        "packet_headers": _new_packet_headers(cursor, start_epoch),
+    }
+
+
 def main() -> int:
     p = argparse.ArgumentParser(
         description="Safely tap one exact OCR text item from rapidocr_latest.json."
@@ -102,12 +191,16 @@ def main() -> int:
         help="Hold one stationary touchscreen press for this many milliseconds instead of an instant tap.",
     )
     p.add_argument("--after-timeout", type=float, default=12.0)
+    p.add_argument("--trace-login", action="store_true",
+                   help="Observe login screen and server connection for 20 seconds after the tap; report frame headers only.")
     p.add_argument("--min-score", type=float, default=0.95)
     p.add_argument("--require-state")
     p.add_argument("--require-substate")
     args = p.parse_args()
     if args.watch and args.ocr:
         p.error("--watch and --ocr cannot be used together")
+    if args.trace_login and (not args.watch or args.text != "登录游戏"):
+        p.error("--trace-login requires --watch and exact text 登录游戏")
     if args.watch and (not args.require_state or not args.require_substate):
         p.error("--watch requires --require-state and --require-substate")
     if args.after_timeout < 0:
@@ -192,6 +285,8 @@ def main() -> int:
     if args.watch:
         if not current_focus().get("truthan_foreground", False):
             raise RuntimeError("Tru Than lost foreground before OCR-derived tap")
+    cursor = _packet_cursor() if args.trace_login else {}
+    start_epoch = time.time()
     if args.press_ms:
         # ADB's instant tap sends DOWN and UP together. A stationary swipe
         # keeps one pointer down briefly without moving outside the OCR box.
@@ -207,7 +302,8 @@ def main() -> int:
         result = tap_px(tx, ty)
     print("TAP_RESULT=" + json.dumps(result, ensure_ascii=True))
     if args.watch:
-        after = _wait_for_watch_transition(data, args.after_timeout)
+        after = (_trace_login_after_tap(data, max(20.0, args.after_timeout), cursor, start_epoch)
+                 if args.trace_login else _wait_for_watch_transition(data, args.after_timeout))
         print("AFTER=" + json.dumps(after, ensure_ascii=True))
         return 0 if after["transition_observed"] else 3
     return 0
