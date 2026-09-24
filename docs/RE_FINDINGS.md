@@ -4,6 +4,31 @@ This is the chronological technical notebook. Only stable conclusions should be 
 
 ---
 
+## Spawn chain map→spawn→objectDataId→OBJ/IMG (2026-09-25)
+
+Proposal: `docs/research/MAP_SPAWN_OBJECT_CHAIN_PROPOSAL.md`.
+
+- Exact Original 1.17 readers traced: cmd132 `processViewSpriteMessage`
+  (`GameWorld.java:12681`, dispatch `:7299`), GNPC body N1–N20 + block C/V;
+  cmd9 `processNpcLeadListInSceneMessage` (`:8800`, mode0: i32 id, str name,
+  i16 X/Y, flags); cmd323 collection view (`:4186`).
+- Appearance on the Original wire is **objectDataId i16** (+ optional
+  image_ids overrides). `setObjectDataId` → `/data/obj/<id>.obj` → embedded
+  IMG slots. ModelID (`n420*`/`m510*`) is PC/revived conf only — not on
+  Original cmd132 (`REJECTED` as required field).
+- PC jar `main.b.a.g.g` readers take UTF ModelID/names first — **different
+  framing**; do not copy into Original encoder (`CANDIDATE` only).
+- Bounded search: TTpc conf + revived APK conf/json/txt (42 entries) —
+  **0 hits** for spawn/ModelID/objectDataId needles. No client spawn tables.
+- BLRM `npc_view_body` field order **matches** DEX (no layout bug). Gaps:
+  original objectDataId for tutorial NPCs `UNKNOWN`; original spawn XY
+  `UNKNOWN`; **cmd=9 never sent** by server. First missing data fields are
+  objectDataId and XY; first missing companion packet is cmd9.
+- VERIFIED example only: TEST OBJ1014, scene 9068, (203,253), run112928 —
+  not an original tutorial spawn. No server code changed.
+
+---
+
 ## PC gameplay conf tables (2026-09-24)
 
 Research catalog: `docs/research/PC_SKILLS_EQUIPMENT_QUESTS.md`.

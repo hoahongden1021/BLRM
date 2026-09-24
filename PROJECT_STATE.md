@@ -3,6 +3,13 @@
 Last known stable baseline: **LocalServer v0.26**
 Current emphasis: **reverse real NPC/mob spawn + starter tutorial flow without guessing**
 
+Research (2026-09-25): spawn-chain static trace complete — cmd132/cmd9/cmd323
+field order VERIFIED from DEX; objectDataId→obj→img VERIFIED; ModelID not on
+Original wire; no spawn tables in TTpc/revived client files (bounded search 0 hits).
+BLRM `npc_view_body` layout matches client; missing original objectDataId/XY
+and missing cmd=9 emission. Proposal:
+`docs/research/MAP_SPAWN_OBJECT_CHAIN_PROPOSAL.md`. No server code changed.
+
 Research (2026-09-24): PC skill/equipment conf language tables decoded with jar
 loaders (`A`/`p`); `Tasks_language.dat` proven absent in jar/TTpc/revived/original;
 Android quests/skills/goods are packet-driven (`getFunctioRoleQuest`,

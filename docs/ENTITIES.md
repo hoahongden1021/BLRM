@@ -23,6 +23,11 @@ The real server-driven NPC/mob system is not yet fully reconstructed.
 
 Do not infer entity identity from visual similarity alone.
 
+Spawn-chain proposal (2026-09-25): cmd132/cmd9/cmd323 field order VERIFIED;
+objectDataId is the Original appearance identity (not ModelID). Original
+tutorial objectDataId and spawn XY remain UNKNOWN; BLRM never sends cmd9.
+See `docs/research/MAP_SPAWN_OBJECT_CHAIN_PROPOSAL.md`.
+
 ## Character classes / skills (2026-09-24)
 
 - Occupations (original): 力士(0), 刺客(1), 唤雷师(2), 天师(3), 武神(4), 圣仙(5);
