@@ -1,0 +1,21 @@
+{
+  "objects": 377,
+  "objects_with_images": 295,
+  "images_total": 2027,
+  "images_referenced_by_obj": 303,
+  "images_unmatched": 1724,
+  "npc_names": 512,
+  "monster_names": 624,
+  "mount_names": 108,
+  "weapon_names": 720,
+  "fabao_names": 30,
+  "skills": 384,
+  "pgg_groups": 6,
+  "prop_png": 441,
+  "prop_v5_png": 457,
+  "status_counts_objects": {
+    "VERIFIED": 377,
+    "PARTIAL": 0,
+    "UNKNOWN": 0
+  }
+}

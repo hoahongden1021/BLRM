@@ -1,0 +1,11 @@
+entity,id_field,image_resource,status,evidence
+object appearance,"objectDataId (short, packet or loader)",res/data/obj/{id}.obj → image slots → res/data/img/{imgId}.img,VERIFIED,GObjectData.init; PC main.b.a.e.a.d [APK_NPC]/[APK_CREATURE]; extract_entity_evidence.py
+goods icon,"iconId (short, packet)",res/data/pgg/{GOOGS_PNG[type]}.pgg index=iconId-type*1000,VERIFIED,CommonConstants.GOOGS_PNG; GameWorld.getGoodsIcon; GPNGGroupData.getIconIdList
+skill icon,"iconId (short, packet)",res/data/pgg/5.pgg index=iconId-5*1000,VERIFIED,RoleSkillList.setIconList; GameWorld.java:16761; PC main.b.a.f.A 'skill id / png id'
+skill→icon static table,skill id,(none),UNKNOWN,no static skill→icon column in zsSkills_language.dat or DEX/jar strings
+NPC name,ModelID (n420…),conf/zsNpc_language.dat names only,PARTIAL,main.b.a.a.y; no ModelID→obj column
+monster name,ModelID (m510…),conf/zsMonters_language.dat names only,PARTIAL,main.b.a.a.v; no ModelID→obj column
+mount name,MountID,conf/zsmount_language.dat names; appearance packet setHorse,PARTIAL,main.b.a.a.w; GSprite.setHorse; fallback obj 1104
+weapon/item name,item id,conf/zsweapon_language.dat names; icon packet,PARTIAL,main.b.a.a.p; no static icon column
+prop PNG,numeric filename,assets/prop/{id}.png,UNKNOWN,ImageManager path category exists; entity key not proven
+skill effect anim,anuId ≥ 9000,res/data/obj/{anuId}.obj SE[picId],CANDIDATE,"apk_skill_effects.json load_convention (ClientZS note), not Original DEX"

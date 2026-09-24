@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tru Than entity ↔ image catalog</title>
+<style>
+body { font-family: Segoe UI, sans-serif; margin: 1.5rem; color: #111; }
+h1 { margin-bottom: .2rem; }
+.note, .counts { color: #444; font-size: .95rem; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0 2rem; font-size: .85rem; }
+th, td { border: 1px solid #ccc; padding: .35rem .45rem; vertical-align: top; }
+th { background: #f0f0f0; text-align: left; }
+img { max-width: 72px; max-height: 72px; display: block; }
+.status-VERIFIED { color: #0a7a0a; font-weight: 600; }
+a { color: #06c; }
+.badges span { display: inline-block; background: #eef; border: 1px solid #99c; border-radius: 4px; padding: .1rem .4rem; margin-right: .3rem; }
+</style>
+</head>
+<body>
+<h1>Tru Than / 诛神OL — entity ↔ image catalog</h1>
+<p class="note">Sources: TTpc ZhuShen-1.0.0.jar assets, Original 1.17 APK, Revived TruThan.apk (read-only). Generated from code+asset evidence. Status: VERIFIED / PARTIAL / CANDIDATE / UNKNOWN. Never treat visual resemblance as identity.</p>
+<div class="counts badges">
+<span>objects 377</span>
+<span>obj→img VERIFIED 377</span>
+<span>images 2027</span>
+<span>unmatched images 1724</span>
+<span>npc 512</span>
+<span>monsters 624</span>
+<span>mounts 108</span>
+<span>weapons 720</span>
+<span>skills 384</span>
+<span>fabao 30</span>
+<span>pgg 6</span>
+<span>prop 441</span>
+</div>
+<p class="note">CSVs: catalog_resolution_rules.csv, catalog_objects_images.csv, catalog_npc_names.csv, catalog_monster_names.csv, catalog_mount_names.csv, catalog_weapon_names.csv, catalog_fabao_names.csv, catalog_skills.csv, catalog_pgg_groups.csv, catalog_unmatched_images.csv, catalog_prop_pngs.csv, catalog_counts.json</p>
+<p class="note"><strong>Unresolved:</strong> skill→icon static join; item→iconId static join; ModelID→obj join; prop PNG entity key.</p>
+<p class="note"><strong>Next evidence:</strong> ModelID → objectDataId (packet capture cmd9/cmd132 or server dump); skill id → iconId static mapping (server goods/skill config, not client); prop/{id}.png entity key (PC ImageManager callers with concrete item ids); Original 1.17 runtime iconId samples for goods type encoding confirmation; geniusData.iconImageId source table for alternate skill icon path</p>
+<h2>Resolution rules (status vocabulary)</h2>
+<p class='note'>Full tables in sibling CSV files. Status: VERIFIED/PARTIAL/CANDIDATE/UNKNOWN.</p>
+<table><thead><tr><th>entity</th><th>id_field</th><th>image_resource</th><th>status</th><th>evidence</th></tr></thead><tbody>
+<tr><td>object appearance</td><td>objectDataId (short, packet or loader)</td><td>res/data/obj/{id}.obj → image slots → res/data/img/{imgId}.img</td><td>VERIFIED</td><td>GObjectData.init; PC main.b.a.e.a.d [APK_NPC]/[APK_CREATURE]; extract_entity_evidence.py</td></tr>
+<tr><td>goods icon</td><td>iconId (short, packet)</td><td>res/data/pgg/{GOOGS_PNG[type]}.pgg index=iconId-type*1000</td><td>VERIFIED</td><td>CommonConstants.GOOGS_PNG; GameWorld.getGoodsIcon; GPNGGroupData.getIconIdList</td></tr>
+<tr><td>skill icon</td><td>iconId (short, packet)</td><td>res/data/pgg/5.pgg index=iconId-5*1000</td><td>VERIFIED</td><td>RoleSkillList.setIconList; GameWorld.java:16761; PC main.b.a.f.A 'skill id / png id'</td></tr>
+<tr><td>skill→icon static table</td><td>skill id</td><td>(none)</td><td>UNKNOWN</td><td>no static skill→icon column in zsSkills_language.dat or DEX/jar strings</td></tr>
+<tr><td>NPC name</td><td>ModelID (n420…)</td><td>conf/zsNpc_language.dat names only</td><td>PARTIAL</td><td>main.b.a.a.y; no ModelID→obj column</td></tr>
+<tr><td>monster name</td><td>ModelID (m510…)</td><td>conf/zsMonters_language.dat names only</td><td>PARTIAL</td><td>main.b.a.a.v; no ModelID→obj column</td></tr>
+<tr><td>mount name</td><td>MountID</td><td>conf/zsmount_language.dat names; appearance packet setHorse</td><td>PARTIAL</td><td>main.b.a.a.w; GSprite.setHorse; fallback obj 1104</td></tr>
+<tr><td>weapon/item name</td><td>item id</td><td>conf/zsweapon_language.dat names; icon packet</td><td>PARTIAL</td><td>main.b.a.a.p; no static icon column</td></tr>
+<tr><td>prop PNG</td><td>numeric filename</td><td>assets/prop/{id}.png</td><td>UNKNOWN</td><td>ImageManager path category exists; entity key not proven</td></tr>
+<tr><td>skill effect anim</td><td>anuId ≥ 9000</td><td>res/data/obj/{anuId}.obj SE[picId]</td><td>CANDIDATE</td><td>apk_skill_effects.json load_convention (ClientZS note), not Original DEX</td></tr>
+</tbody></table>
+<h2>PGG icon groups</h2>
+<table><thead><tr><th>pgg_group_id</th><th>path</th><th>index_rule</th><th>usages</th><th>status</th></tr></thead><tbody>
+<tr><td></td><td>res/data/pgg/0.pgg</td><td>local_index = iconId - 0 * 1000</td><td>goods_types=[0]</td><td>VERIFIED</td></tr>
+<tr><td>1</td><td>res/data/pgg/1.pgg</td><td>local_index = iconId - 1 * 1000</td><td>goods_types=[1]</td><td>VERIFIED</td></tr>
+<tr><td>2</td><td>res/data/pgg/2.pgg</td><td>local_index = iconId - 2 * 1000</td><td>goods_types=[2, 3, 4]</td><td>VERIFIED</td></tr>
+<tr><td>5</td><td>res/data/pgg/5.pgg</td><td>local_index = iconId - 5 * 1000</td><td>goods_types=[5];skill_icons=RoleSkillList.setIconList</td><td>VERIFIED</td></tr>
+<tr><td>6</td><td>res/data/pgg/6.pgg</td><td>local_index = iconId - 6 * 1000</td><td>goods_types=[6]</td><td>VERIFIED</td></tr>
+<tr><td>7</td><td>res/data/pgg/7.pgg</td><td>local_index = iconId - 7 * 1000</td><td>goods_types=[7]</td><td>VERIFIED</td></tr>
+</tbody></table>
+<h2>Objects → images (VERIFIED, first 80)</h2>
+<p class='note'>295/377 objects have image links; full list in catalog_objects_images.csv</p>
+<table><thead><tr><th>object_data_id</th><th>status</th><th>image_ids</th><th>preview</th><th>evidence</th></tr></thead><tbody>
+<tr><td>1</td><td>VERIFIED</td><td>25</td><td><img src="catalog_previews/obj_1_img_25.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>2</td><td>VERIFIED</td><td>25</td><td><img src="catalog_previews/obj_2_img_25.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>3</td><td>VERIFIED</td><td>25</td><td><img src="catalog_previews/obj_3_img_25.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>4</td><td>VERIFIED</td><td>25</td><td><img src="catalog_previews/obj_4_img_25.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1000</td><td>VERIFIED</td><td></td><td></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1001</td><td>VERIFIED</td><td></td><td></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1002</td><td>VERIFIED</td><td></td><td></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1003</td><td>VERIFIED</td><td></td><td></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1004</td><td>VERIFIED</td><td></td><td></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1005</td><td>VERIFIED</td><td>3321</td><td><img src="catalog_previews/obj_1005_img_3321.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1006</td><td>VERIFIED</td><td>3322</td><td><img src="catalog_previews/obj_1006_img_3322.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1007</td><td>VERIFIED</td><td>3323</td><td><img src="catalog_previews/obj_1007_img_3323.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1008</td><td>VERIFIED</td><td>7192</td><td><img src="catalog_previews/obj_1008_img_7192.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1009</td><td>VERIFIED</td><td>7193</td><td><img src="catalog_previews/obj_1009_img_7193.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1010</td><td>VERIFIED</td><td>7194</td><td><img src="catalog_previews/obj_1010_img_7194.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1011</td><td>VERIFIED</td><td>1011</td><td><img src="catalog_previews/obj_1011_img_1011.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1012</td><td>VERIFIED</td><td>7195</td><td><img src="catalog_previews/obj_1012_img_7195.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1013</td><td>VERIFIED</td><td>7196</td><td><img src="catalog_previews/obj_1013_img_7196.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1014</td><td>VERIFIED</td><td>7197</td><td><img src="catalog_previews/obj_1014_img_7197.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1015</td><td>VERIFIED</td><td>7198</td><td><img src="catalog_previews/obj_1015_img_7198.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1016</td><td>VERIFIED</td><td>7199</td><td><img src="catalog_previews/obj_1016_img_7199.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1017</td><td>VERIFIED</td><td>7200;7201</td><td><img src="catalog_previews/obj_1017_img_7200.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1018</td><td>VERIFIED</td><td>7202;7201</td><td><img src="catalog_previews/obj_1018_img_7202.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1019</td><td>VERIFIED</td><td>7203;7204</td><td><img src="catalog_previews/obj_1019_img_7203.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1020</td><td>VERIFIED</td><td>7205;7204</td><td><img src="catalog_previews/obj_1020_img_7205.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1099</td><td>VERIFIED</td><td>3170;3168;3169;3171</td><td><img src="catalog_previews/obj_1099_img_3170.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1100</td><td>VERIFIED</td><td>1100</td><td><img src="catalog_previews/obj_1100_img_1100.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1101</td><td>VERIFIED</td><td>1101</td><td><img src="catalog_previews/obj_1101_img_1101.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1102</td><td>VERIFIED</td><td>3172;3174;3173;3175</td><td><img src="catalog_previews/obj_1102_img_3172.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1103</td><td>VERIFIED</td><td>1102</td><td><img src="catalog_previews/obj_1103_img_1102.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1104</td><td>VERIFIED</td><td>1103</td><td><img src="catalog_previews/obj_1104_img_1103.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1105</td><td>VERIFIED</td><td>1108</td><td><img src="catalog_previews/obj_1105_img_1108.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1106</td><td>VERIFIED</td><td>1107</td><td><img src="catalog_previews/obj_1106_img_1107.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1107</td><td>VERIFIED</td><td>1109</td><td><img src="catalog_previews/obj_1107_img_1109.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1108</td><td>VERIFIED</td><td>1106</td><td><img src="catalog_previews/obj_1108_img_1106.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1109</td><td>VERIFIED</td><td>1104</td><td><img src="catalog_previews/obj_1109_img_1104.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1110</td><td>VERIFIED</td><td>1105</td><td><img src="catalog_previews/obj_1110_img_1105.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1111</td><td>VERIFIED</td><td>1110</td><td><img src="catalog_previews/obj_1111_img_1110.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1112</td><td>VERIFIED</td><td>1111;1113;1115</td><td><img src="catalog_previews/obj_1112_img_1111.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1113</td><td>VERIFIED</td><td>1112;1114;1116</td><td><img src="catalog_previews/obj_1113_img_1112.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1114</td><td>VERIFIED</td><td>1117</td><td><img src="catalog_previews/obj_1114_img_1117.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1115</td><td>VERIFIED</td><td>1118</td><td><img src="catalog_previews/obj_1115_img_1118.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1116</td><td>VERIFIED</td><td>1119</td><td><img src="catalog_previews/obj_1116_img_1119.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1117</td><td>VERIFIED</td><td>1120;1121;1122;1123</td><td><img src="catalog_previews/obj_1117_img_1120.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1118</td><td>VERIFIED</td><td>1124;1125;1126;1127</td><td><img src="catalog_previews/obj_1118_img_1124.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1119</td><td>VERIFIED</td><td>1128;1129;1130</td><td><img src="catalog_previews/obj_1119_img_1128.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1120</td><td>VERIFIED</td><td>1131;1132;1133</td><td><img src="catalog_previews/obj_1120_img_1131.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1121</td><td>VERIFIED</td><td>1137;1136;1135;1134</td><td><img src="catalog_previews/obj_1121_img_1137.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1122</td><td>VERIFIED</td><td>1138;1139;1140</td><td><img src="catalog_previews/obj_1122_img_1138.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1123</td><td>VERIFIED</td><td>1141;1143;1142;1144</td><td><img src="catalog_previews/obj_1123_img_1141.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1128</td><td>VERIFIED</td><td>1145;1146;1147;1148</td><td><img src="catalog_previews/obj_1128_img_1145.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1129</td><td>VERIFIED</td><td>1150;1151;1149;1152</td><td><img src="catalog_previews/obj_1129_img_1150.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1130</td><td>VERIFIED</td><td>1155;1154;1153</td><td><img src="catalog_previews/obj_1130_img_1155.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1131</td><td>VERIFIED</td><td>1157;1158;1156</td><td><img src="catalog_previews/obj_1131_img_1157.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1132</td><td>VERIFIED</td><td>1160;1159;1161</td><td><img src="catalog_previews/obj_1132_img_1160.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1133</td><td>VERIFIED</td><td>1162;1163;1164</td><td><img src="catalog_previews/obj_1133_img_1162.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1134</td><td>VERIFIED</td><td>1170;1169;1172;1171</td><td><img src="catalog_previews/obj_1134_img_1170.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1135</td><td>VERIFIED</td><td>1165;1166;1168;1167</td><td><img src="catalog_previews/obj_1135_img_1165.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1136</td><td>VERIFIED</td><td>1173;1174;1175</td><td><img src="catalog_previews/obj_1136_img_1173.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1137</td><td>VERIFIED</td><td>1176;1177;1178;1179</td><td><img src="catalog_previews/obj_1137_img_1176.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1138</td><td>VERIFIED</td><td>1180</td><td><img src="catalog_previews/obj_1138_img_1180.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1139</td><td>VERIFIED</td><td>1181;1182;1183;1184</td><td><img src="catalog_previews/obj_1139_img_1181.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1140</td><td>VERIFIED</td><td>1185;1186;1187</td><td><img src="catalog_previews/obj_1140_img_1185.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1141</td><td>VERIFIED</td><td>1188;1189;1190;1191</td><td><img src="catalog_previews/obj_1141_img_1188.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1142</td><td>VERIFIED</td><td>1192</td><td><img src="catalog_previews/obj_1142_img_1192.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1143</td><td>VERIFIED</td><td>1193</td><td><img src="catalog_previews/obj_1143_img_1193.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1144</td><td>VERIFIED</td><td>1194</td><td><img src="catalog_previews/obj_1144_img_1194.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1145</td><td>VERIFIED</td><td>1195</td><td><img src="catalog_previews/obj_1145_img_1195.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1146</td><td>VERIFIED</td><td>1196;1197;1198</td><td><img src="catalog_previews/obj_1146_img_1196.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1147</td><td>VERIFIED</td><td>1199</td><td><img src="catalog_previews/obj_1147_img_1199.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1148</td><td>VERIFIED</td><td>1200</td><td><img src="catalog_previews/obj_1148_img_1200.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1149</td><td>VERIFIED</td><td>1201</td><td><img src="catalog_previews/obj_1149_img_1201.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1150</td><td>VERIFIED</td><td>1202</td><td><img src="catalog_previews/obj_1150_img_1202.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1151</td><td>VERIFIED</td><td>1203</td><td><img src="catalog_previews/obj_1151_img_1203.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1152</td><td>VERIFIED</td><td>1204</td><td><img src="catalog_previews/obj_1152_img_1204.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1153</td><td>VERIFIED</td><td>1205</td><td><img src="catalog_previews/obj_1153_img_1205.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1154</td><td>VERIFIED</td><td>1206</td><td><img src="catalog_previews/obj_1154_img_1206.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1155</td><td>VERIFIED</td><td>1207</td><td><img src="catalog_previews/obj_1155_img_1207.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1156</td><td>VERIFIED</td><td>1208</td><td><img src="catalog_previews/obj_1156_img_1208.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+<tr><td>1157</td><td>VERIFIED</td><td>1209</td><td><img src="catalog_previews/obj_1157_img_1209.png" alt="" loading="lazy"></td><td>obj header image-slot shorts → res/data/img/{id}.img (GObjectData.init / PC loader main.b.a.e.a.d)</td></tr>
+</tbody></table>
+<h2>Skills (DESCRIPTION_ONLY; icon packet-driven, first 60)</h2>
+<p class='note'>384 rows total → catalog_skills.csv</p>
+<table><thead><tr><th>skill_id</th><th>name_vn</th><th>name_e</th><th>icon_status</th><th>description_status</th><th>evidence</th></tr></thead><tbody>
+<tr><td>17101</td><td>Đoạt Phách Trảm</td><td>Soul Reaver Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17102</td><td>Đoạt Phách Trảm</td><td>Soul Reaver Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17103</td><td>Đoạt Phách Trảm</td><td>Soul Reaver Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17104</td><td>Đoạt Phách Trảm</td><td>Soul Reaver Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17105</td><td>Đoạt Phách Trảm</td><td>Soul Reaver Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17106</td><td>Đoạt Phách Trảm</td><td>Soul Reaver Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17107</td><td>Phệ Hồn Phong Ma Trảm</td><td>Soul Devouring Demon-Sealing Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17108</td><td>Phệ Hồn Phong Ma Trảm</td><td>Soul Devouring Demon-Sealing Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17120</td><td>Tịch Diệt Trảm</td><td>Oblivion Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17121</td><td>Tịch Diệt Trảm</td><td>Oblivion Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17122</td><td>Tịch Diệt Trảm</td><td>Oblivion Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17123</td><td>Tịch Diệt Trảm</td><td>Oblivion Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17124</td><td>Tịch Diệt Trảm</td><td>Oblivion Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17125</td><td>Tịch Diệt Trảm</td><td>Oblivion Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17126</td><td>Quỷ Thần Cung</td><td>Demon God’s Might</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17127</td><td>Quỷ Thần Cung</td><td>Demon God’s Might</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17128</td><td>Quỷ Thần Cung</td><td>Demon God’s Might</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17129</td><td>Quỷ Thần Cung</td><td>Demon God’s Might</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17130</td><td>Quỷ Thần Cung</td><td>Demon God’s Might</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17131</td><td>Quỷ Thần Cung</td><td>Demon God’s Might</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17139</td><td>Đoạn Hồn Trảm</td><td>Soul Severing Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17140</td><td>Đoạn Hồn Trảm</td><td>Soul Severing Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17141</td><td>Đoạn Hồn Trảm</td><td>Soul Severing Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17142</td><td>Đoạn Hồn Trảm</td><td>Soul Severing Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17143</td><td>Đoạn Hồn Trảm</td><td>Soul Severing Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17144</td><td>Đoạn Hồn Trảm</td><td>Soul Severing Slash</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17145</td><td>Bàn Cổ Truyền Nhân</td><td>Heir of Pangu</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17146</td><td>Bàn Cổ Truyền Nhân</td><td>Heir of Pangu</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17147</td><td>Bàn Cổ Truyền Nhân</td><td>Heir of Pangu</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17148</td><td>Bàn Cổ Truyền Nhân</td><td>Heir of Pangu</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17149</td><td>Bàn Cổ Truyền Nhân</td><td>Heir of Pangu</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17150</td><td>Bàn Cổ Truyền Nhân</td><td>Heir of Pangu</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17151</td><td>Bá Vương Cung</td><td>Tyrant’s Roar</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17152</td><td>Bá Vương Cung</td><td>Tyrant’s Roar</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17153</td><td>Hỗn Nguyên Hộ Thể</td><td>Primordial Body Guard</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17154</td><td>Hỗn Nguyên Hộ Thể</td><td>Primordial Body Guard</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17155</td><td>Hỗn Nguyên Hộ Thể</td><td>Primordial Body Guard</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17156</td><td>Hỗn Nguyên Hộ Thể</td><td>Primordial Body Guard</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17157</td><td>Hỗn Nguyên Hộ Thể</td><td>Primordial Body Guard</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17158</td><td>Hỗn Nguyên Hộ Thể</td><td>Primordial Body Guard</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17159</td><td>Cuồng Bạo</td><td>Berserk</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17160</td><td>Cuồng Bạo</td><td>Berserk</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17161</td><td>Cuồng Bạo</td><td>Berserk</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17162</td><td>Cuồng Bạo</td><td>Berserk</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17163</td><td>Cuồng Bạo</td><td>Berserk</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17164</td><td>Cuồng Bạo</td><td>Berserk</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17165</td><td>Hoành Tảo Thiên Quân</td><td>Sweeping Thousand Armies</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17166</td><td>Hoành Tảo Thiên Quân</td><td>Sweeping Thousand Armies</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17167</td><td>Hoành Tảo Thiên Quân</td><td>Sweeping Thousand Armies</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17168</td><td>Hoành Tảo Thiên Quân</td><td>Sweeping Thousand Armies</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17169</td><td>Hoành Tảo Thiên Quân</td><td>Sweeping Thousand Armies</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17170</td><td>Hoành Tảo Thiên Quân</td><td>Sweeping Thousand Armies</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17171</td><td>Huyết Tế</td><td>Blood Sacrifice</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17172</td><td>Huyết Tế</td><td>Blood Sacrifice</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17173</td><td>Huyết Tế</td><td>Blood Sacrifice</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17174</td><td>Huyết Tế</td><td>Blood Sacrifice</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17175</td><td>Huyết Tế</td><td>Blood Sacrifice</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17176</td><td>Huyết Tế</td><td>Blood Sacrifice</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17178</td><td>Khai Thiên Mục</td><td>Heaven Opening Eye</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+<tr><td>17179</td><td>Khai Thiên Mục</td><td>Heaven Opening Eye</td><td>UNKNOWN</td><td>DESCRIPTION_ONLY</td><td>skill_family_catalog.csv + zsSkills_language.dat; no static skill→icon table in DEX/jar</td></tr>
+</tbody></table>
+<h2>NPC names (no static obj join, first 40)</h2>
+<p class='note'>512 rows → catalog_npc_names.csv</p>
+<table><thead><tr><th>model_id</th><th>name_vn</th><th>name_e</th><th>object_status</th><th>evidence</th></tr></thead><tbody>
+<tr><td>n420001</td><td>Hướng Dẫn Tân Thủ</td><td>Beginner Guide</td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420002</td><td>Vân Trung Tiên</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420003</td><td>Tiên Nữ Hướng Dẫn</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420004</td><td>Trưởng Thôn</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420005</td><td>Diêm Thợ Rèn</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420006</td><td>Tống Tiên</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420007</td><td>Vương Thiết</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420008</td><td>Đàm Việt</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420009</td><td>Dịch Thừa</td><td>Yi Cheng</td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420010</td><td>Dương Đại Phu</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420011</td><td>Ông Chủ Sai</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420012</td><td>Điền Bình</td><td>Tian Ping</td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420013</td><td>Hoàng Tử Huyền</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420014</td><td>Lôi Nhân Kiệt</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420015</td><td>Doãn Lam Yên</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420016</td><td>Lý Khắc</td><td>Li Ke</td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420017</td><td>Hoàng Hành</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420018</td><td>Bằng Thao</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420019</td><td>Thị Nữ Đàm Thu</td><td>Maid Tam Thu</td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420020</td><td>Lão Nghiện Rượu</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420021</td><td>Tiểu Vũ</td><td>Little Vu</td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420022</td><td>Dương Côn</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420023</td><td>Hổ Quốc</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420024</td><td>Sứ Giả Hoạt Động</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420025</td><td>Gói Quà</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420026</td><td>Thiên Cơ Ty Khảo</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420027</td><td>Nam Cung Lục Đầu</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420028</td><td>Tần Đại Phu</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420029</td><td>Vệ Binh Điểm Hồi Sinh</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420030</td><td>Mao Sơn Đạo Sĩ</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420031</td><td>Biên Dịch Quan</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420032</td><td>Lý Văn</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420033</td><td>Quản Lý Bang Hội</td><td>Guild Manager Fan Zhong</td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420034</td><td>Đấu Giá</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420035</td><td>Minh Thợ Rèn</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420036</td><td>Diêm Vĩ</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420037</td><td>Thụy Thanh</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420038</td><td>Tô Quân</td><td></td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420039</td><td>Lô Vi Đạo Nhân</td><td>Reed Taoist</td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+<tr><td>n420040</td><td>Vọng Nhai Thuật Sĩ</td><td>Cliff Sorcerer</td><td>UNKNOWN</td><td>zsNpc_language.dat name only; ModelID→obj join not found (MODELID_MAP_SPAWN_JOIN.md)</td></tr>
+</tbody></table>
+<h2>Monster names (first 40)</h2>
+<p class='note'>624 rows → catalog_monster_names.csv</p>
+<table><thead><tr><th>model_id</th><th>name_vn</th><th>name_e</th><th>object_status</th><th>evidence</th></tr></thead><tbody>
+<tr><td>m510101</td><td>Thỏ Hoang</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510102</td><td>Chim sẻ</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510103</td><td>Hồ Ly Lửa</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510104</td><td>Nấm Tinh</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510105</td><td>Hồng Hồ Ly</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510106</td><td>Thủy Linh</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510107</td><td>Bùn Thối</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510108</td><td>Ma Thủ</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510109</td><td>Quái Đèn Lồng</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510110</td><td>Nửa Khô Lâu</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510111</td><td>Phi Đầu Man</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510112</td><td>Bích Lạc U Hồn</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510113</td><td>Quỷ Hỏa</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510114</td><td>Hồ Ly</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510115</td><td>Dã Sơn Tước</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510116</td><td>Người Máy Luyện Ngục</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510117</td><td>Đào Mộc Tinh</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510118</td><td>Mộc Đức Chân Quân [Tinh]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510119</td><td>Tiểu Sơn Tặc</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510120</td><td>Vệ Binh [Thủ]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510121</td><td>Vệ Binh [Thủ]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510122</td><td>Vệ Binh [Thủ]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510123</td><td>Vệ Binh [Thủ]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510124</td><td>Vệ Binh [Thủ]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510125</td><td>Người Máy Da Đồng</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510126</td><td>Ngụy Trấn Thiên [Tinh]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510127</td><td>Đông Đầu Tinh Quân [Tinh]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510128</td><td>Sơn Tước Lớn</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510129</td><td>Thiết Thụ Tinh</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510130</td><td>Nữ Sơn Tặc</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510131</td><td>Tiểu Thâu</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510132</td><td>Sơn Tặc Nhỏ</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510133</td><td>Người Máy Đồng Mộc</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510134</td><td>Người Máy Đào Mộc</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510135</td><td>Tây Đẩu Tinh Quân [Tinh]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510136</td><td>Thân Kiến [Tinh]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510137</td><td>Tiếc Ác Hổ [Tinh]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510138</td><td>Thủ Lĩnh Đầu Lâu</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510139</td><td>Ma Đạo Tử</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+<tr><td>m510140</td><td>Huyết Khô Lâu [Tinh]</td><td></td><td>UNKNOWN</td><td>zsMonters_language.dat name only; ModelID→obj join not found</td></tr>
+</tbody></table>
+<h2>Mount names (first 40)</h2>
+<p class='note'>108 rows → catalog_mount_names.csv</p>
+<table><thead><tr><th>mount_id</th><th>name_vn</th><th>name_e</th><th>object_status</th><th>evidence</th></tr></thead><tbody>
+<tr><td>m900001</td><td>Tháp Gỗ</td><td>Wooden Tower</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900001#1</td><td>Tháp Gỗ</td><td>Wooden Tower</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900002</td><td>Alpaca</td><td>Alpaca</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900002#1</td><td>Alpaca</td><td>Alpaca</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900003</td><td>Ngọc Thố</td><td>Jade Rabbit</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900003#1</td><td>Ngọc Thố</td><td>Jade Rabbit</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900004</td><td>Hoả Diễm Cự Viên</td><td>Flame Giant Ape</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900004#1</td><td>Hoả Diễm Cự Viên</td><td>Flame Giant Ape</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900005</td><td>Ngựa Gỗ (Nam)</td><td>Wooden Horse (M)</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900005#1</td><td>Ngựa Gỗ (Nam)</td><td>Wooden Horse (M)</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900006</td><td>Ngựa Gỗ (Nữ)</td><td>Wooden Horse (F)</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900006#1</td><td>Ngựa Gỗ (Nữ)</td><td>Wooden Horse (F)</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900007</td><td>Độc Giác Thú</td><td>Unicorn Beast</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900007#1</td><td>Độc Giác Thú</td><td>Unicorn Beast</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900008</td><td>Kungfu Panda</td><td>Kung Fu Panda</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900008#1</td><td>Kungfu Panda</td><td>Kung Fu Panda</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900009</td><td>Hà Mã</td><td>Hippo</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900009#1</td><td>Hà Mã</td><td>Hippo</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900010</td><td>Hắc Hổ</td><td>Black Tiger</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900010#1</td><td>Hắc Hổ</td><td>Black Tiger</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900011</td><td>Hao Thiên Khuyển</td><td>Howling Celestial Dog</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900011#1</td><td>Hao Thiên Khuyển</td><td>Howling Celestial Dog</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900012</td><td>Hồ Lô</td><td>Gourd</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900012#1</td><td>Hồ Lô</td><td>Gourd</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900013</td><td>Hỏa Diễm Sư</td><td>Flame Lion</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900013#1</td><td>Hỏa Diễm Sư</td><td>Flame Lion</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900014</td><td>Hỏa Thú</td><td>Fire Beast</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900014#1</td><td>Hỏa Thú</td><td>Fire Beast</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900015</td><td>Huyền Vũ</td><td>Black Tortoise</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900015#1</td><td>Huyền Vũ</td><td>Black Tortoise</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900016</td><td>Thanh Long</td><td>Azure Dragon</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900016#1</td><td>Thanh Long</td><td>Azure Dragon</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900017</td><td>Bạch Hổ</td><td>White Tiger</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900017#1</td><td>Bạch Hổ</td><td>White Tiger</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900018</td><td>Bích Thủy Kim Tinh Thú</td><td>Jade-Water Golden-Eye Beast</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900018#1</td><td>Bích Thủy Kim Tinh Thú</td><td>Jade-Water Golden-Eye Beast</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900019</td><td>Cơ Khí Thanh Oa</td><td>Mech Frog</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900019#1</td><td>Cơ Khí Thanh Oa</td><td>Mech Frog</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900020</td><td>Hổ Cuồng Chiến</td><td>Berserk Tiger</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+<tr><td>m900020#1</td><td>Hổ Cuồng Chiến</td><td>Berserk Tiger</td><td>UNKNOWN</td><td>zsmount_language.dat name; appearance object is packet setHorse(objectDataId); fallback obj 1104; fallback_obj_1104_preview=catalog_previews/obj_1104_img_1103.png</td></tr>
+</tbody></table>
+<h2>Weapon names (first 40)</h2>
+<p class='note'>720 rows → catalog_weapon_names.csv</p>
+<table><thead><tr><th>item_id</th><th>name_vn</th><th>name_e</th><th>icon_status</th><th>icon_path_rule</th></tr></thead><tbody>
+<tr><td>1108001</td><td>Lôi Đình Đoản Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108002</td><td>Lôi Đình Đoản Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108003</td><td>Lôi Đình Đoản Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108004</td><td>Lôi Đình Đoản Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108005</td><td>Lôi Đình Thanh Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108006</td><td>Lôi Đình Thanh Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108007</td><td>Lôi Đình Thanh Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108008</td><td>Lôi Đình Thanh Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108009</td><td>Lôi Đình Thanh Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108010</td><td>Lôi Đình Cốt Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108011</td><td>Lôi Đình Cốt Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108012</td><td>Lôi Đình Cốt Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108013</td><td>Lôi Đình Cốt Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108014</td><td>Lôi Đình Cốt Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108015</td><td>Lôi Đình Ngư Trường Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108016</td><td>Lôi Đình Ngư Trường Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108017</td><td>Lôi Đình Ngư Trường Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108018</td><td>Lôi Đình Ngư Trường Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108019</td><td>Lôi Đình Ngư Trường Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108020</td><td>Lôi Đình Cổ Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108021</td><td>Lôi Đình Cổ Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108022</td><td>Lôi Đình Cổ Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108023</td><td>Lôi Đình Cổ Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108024</td><td>Lôi Đình Cổ Đồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108025</td><td>Lôi Đình Cự Khuyết Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108026</td><td>Lôi Đình Cự Khuyết Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108027</td><td>Lôi Đình Cự Khuyết Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108028</td><td>Lôi Đình Cự Khuyết Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108029</td><td>Lôi Đình Cự Khuyết Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108030</td><td>Lôi Đình Thanh Hồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108031</td><td>Lôi Đình Thanh Hồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108032</td><td>Lôi Đình Thanh Hồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108033</td><td>Lôi Đình Thanh Hồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108034</td><td>Lôi Đình Thanh Hồng Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108035</td><td>Lôi Đình Phù Vân Lạc Nhật Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108036</td><td>Lôi Đình Phù Vân Lạc Nhật Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108037</td><td>Lôi Đình Phù Vân Lạc Nhật Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108038</td><td>Lôi Đình Phù Vân Lạc Nhật Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108039</td><td>Lôi Đình Phù Vân Lạc Nhật Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+<tr><td>1108040</td><td>Lôi Đình Bạch Ngân Linh Văn Chiến Kiếm</td><td></td><td>UNKNOWN</td><td>pgg group GOOGS_PNG[type] index=iconId-type*1000 (iconId packet field)</td></tr>
+</tbody></table>
+<h2>Fabao names</h2>
+<p class='note'>30 rows → catalog_fabao_names.csv</p>
+<table><thead><tr><th>model_id</th><th>name_vn</th><th>name_e</th><th>object_status</th></tr></thead><tbody>
+<tr><td>f920001</td><td>Kim Chuyên</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f920002</td><td>Toản Tâm Đinh</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f920003</td><td>Long Hổ Như Ý</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f920004</td><td>Hỏa Long Tiêu</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f920005</td><td>Ngũ Quang Thạch</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f940001</td><td>Thái Dương Thần Châm</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f940002</td><td>Hàng Ma Chử</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f940003</td><td>Hỗn Nguyên Bảo Châu</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f940004</td><td>Bát Quái Vân Quang Bá</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f940005</td><td>Lạc Phách Kính</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f960001</td><td>Phiên Thiên Ấn</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f960002</td><td>Ngô Câu</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f960003</td><td>Lục Tiên Kiếm</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f960004</td><td>Đả Thần Tiên</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f960005</td><td>Bát Quái Kính</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f970001</td><td>Tru Tiên Kiếm</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f970002</td><td>Âm Dương Kính</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f970003</td><td>Định Hải Châu</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f970004</td><td>Tuyệt Tiên Kiếm</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f970005</td><td>Chiếu Thiên Ấn</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f980001</td><td>Chàng Tâm Chử</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f980002</td><td>Hỗn Nguyên Phan</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f980003</td><td>Tứ Hải Bình</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f980004</td><td>Hãm Tiên Kiếm</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f980005</td><td>Mậu Ất Hạnh Hoàng Kỳ</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f990001</td><td>Cửu Hỏa Thất Cầm Phiến</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f990002</td><td>Trân Châu Tán</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f990003</td><td>Bàn Cổ Phan</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f990004</td><td>Ly Địa Diệm Quang Kỳ</td><td></td><td>UNKNOWN</td></tr>
+<tr><td>f990005</td><td>Tam Bảo Ngọc Như Ý</td><td></td><td>UNKNOWN</td></tr>
+</tbody></table>
+<h2>Unmatched images (not in any obj slot, first 40)</h2>
+<p class='note'>1724 unmatched → catalog_unmatched_images.csv</p>
+<table><thead><tr><th>image_id</th><th>path</th><th>status</th><th>note</th><th>preview</th></tr></thead><tbody>
+<tr><td>26</td><td>res/data/img/26.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_26.png" alt="" loading="lazy"></td></tr>
+<tr><td>27</td><td>res/data/img/27.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_27.png" alt="" loading="lazy"></td></tr>
+<tr><td>28</td><td>res/data/img/28.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_28.png" alt="" loading="lazy"></td></tr>
+<tr><td>29</td><td>res/data/img/29.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_29.png" alt="" loading="lazy"></td></tr>
+<tr><td>30</td><td>res/data/img/30.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_30.png" alt="" loading="lazy"></td></tr>
+<tr><td>31</td><td>res/data/img/31.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_31.png" alt="" loading="lazy"></td></tr>
+<tr><td>32</td><td>res/data/img/32.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_32.png" alt="" loading="lazy"></td></tr>
+<tr><td>33</td><td>res/data/img/33.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_33.png" alt="" loading="lazy"></td></tr>
+<tr><td>34</td><td>res/data/img/34.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_34.png" alt="" loading="lazy"></td></tr>
+<tr><td>35</td><td>res/data/img/35.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_35.png" alt="" loading="lazy"></td></tr>
+<tr><td>36</td><td>res/data/img/36.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_36.png" alt="" loading="lazy"></td></tr>
+<tr><td>37</td><td>res/data/img/37.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_37.png" alt="" loading="lazy"></td></tr>
+<tr><td>38</td><td>res/data/img/38.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_38.png" alt="" loading="lazy"></td></tr>
+<tr><td>39</td><td>res/data/img/39.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_39.png" alt="" loading="lazy"></td></tr>
+<tr><td>40</td><td>res/data/img/40.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_40.png" alt="" loading="lazy"></td></tr>
+<tr><td>41</td><td>res/data/img/41.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_41.png" alt="" loading="lazy"></td></tr>
+<tr><td>42</td><td>res/data/img/42.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_42.png" alt="" loading="lazy"></td></tr>
+<tr><td>43</td><td>res/data/img/43.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_43.png" alt="" loading="lazy"></td></tr>
+<tr><td>44</td><td>res/data/img/44.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_44.png" alt="" loading="lazy"></td></tr>
+<tr><td>45</td><td>res/data/img/45.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_45.png" alt="" loading="lazy"></td></tr>
+<tr><td>46</td><td>res/data/img/46.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_46.png" alt="" loading="lazy"></td></tr>
+<tr><td>47</td><td>res/data/img/47.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_47.png" alt="" loading="lazy"></td></tr>
+<tr><td>48</td><td>res/data/img/48.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_48.png" alt="" loading="lazy"></td></tr>
+<tr><td>49</td><td>res/data/img/49.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_49.png" alt="" loading="lazy"></td></tr>
+<tr><td>50</td><td>res/data/img/50.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_50.png" alt="" loading="lazy"></td></tr>
+<tr><td>51</td><td>res/data/img/51.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_51.png" alt="" loading="lazy"></td></tr>
+<tr><td>52</td><td>res/data/img/52.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_52.png" alt="" loading="lazy"></td></tr>
+<tr><td>53</td><td>res/data/img/53.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_53.png" alt="" loading="lazy"></td></tr>
+<tr><td>54</td><td>res/data/img/54.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_54.png" alt="" loading="lazy"></td></tr>
+<tr><td>55</td><td>res/data/img/55.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_55.png" alt="" loading="lazy"></td></tr>
+<tr><td>56</td><td>res/data/img/56.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_56.png" alt="" loading="lazy"></td></tr>
+<tr><td>57</td><td>res/data/img/57.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_57.png" alt="" loading="lazy"></td></tr>
+<tr><td>58</td><td>res/data/img/58.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_58.png" alt="" loading="lazy"></td></tr>
+<tr><td>59</td><td>res/data/img/59.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_59.png" alt="" loading="lazy"></td></tr>
+<tr><td>60</td><td>res/data/img/60.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_60.png" alt="" loading="lazy"></td></tr>
+<tr><td>61</td><td>res/data/img/61.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_61.png" alt="" loading="lazy"></td></tr>
+<tr><td>62</td><td>res/data/img/62.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_62.png" alt="" loading="lazy"></td></tr>
+<tr><td>63</td><td>res/data/img/63.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_63.png" alt="" loading="lazy"></td></tr>
+<tr><td>64</td><td>res/data/img/64.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_64.png" alt="" loading="lazy"></td></tr>
+<tr><td>65</td><td>res/data/img/65.img</td><td>UNKNOWN</td><td>not referenced by any .obj image slot</td><td><img src="catalog_previews/img_65.png" alt="" loading="lazy"></td></tr>
+</tbody></table>
+<h2>prop/prop_v5 PNGs (key UNKNOWN, first 30)</h2>
+<p class='note'>898 files → catalog_prop_pngs.csv</p>
+<table><thead><tr><th>resource</th><th>id</th><th>path</th><th>status</th><th>note</th></tr></thead><tbody>
+<tr><td>prop</td><td></td><td>prop/0.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>1</td><td>prop/1.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>2</td><td>prop/2.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>3</td><td>prop/3.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>4</td><td>prop/4.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>5</td><td>prop/5.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>6</td><td>prop/6.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>7</td><td>prop/7.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>8</td><td>prop/8.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>9</td><td>prop/9.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>10</td><td>prop/10.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>11</td><td>prop/11.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>12</td><td>prop/12.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>13</td><td>prop/13.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>14</td><td>prop/14.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>15</td><td>prop/15.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>16</td><td>prop/16.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>17</td><td>prop/17.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>18</td><td>prop/18.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>19</td><td>prop/19.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>20</td><td>prop/20.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>21</td><td>prop/21.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>22</td><td>prop/22.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>23</td><td>prop/23.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>24</td><td>prop/24.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>25</td><td>prop/25.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>26</td><td>prop/26.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>27</td><td>prop/27.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>28</td><td>prop/28.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+<tr><td>prop</td><td>29</td><td>prop/29.png</td><td>UNKNOWN</td><td>ImageManager path category 'prop' builds /{dir}/{id}.png; entity key formation not proven</td></tr>
+</tbody></table>
+</body>
+</html>

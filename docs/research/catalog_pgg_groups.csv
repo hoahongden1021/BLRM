@@ -1,0 +1,7 @@
+pgg_group_id,path,index_rule,usages,status
+0,res/data/pgg/0.pgg,local_index = iconId - 0 * 1000,goods_types=[0],VERIFIED
+1,res/data/pgg/1.pgg,local_index = iconId - 1 * 1000,goods_types=[1],VERIFIED
+2,res/data/pgg/2.pgg,local_index = iconId - 2 * 1000,"goods_types=[2, 3, 4]",VERIFIED
+5,res/data/pgg/5.pgg,local_index = iconId - 5 * 1000,goods_types=[5];skill_icons=RoleSkillList.setIconList,VERIFIED
+6,res/data/pgg/6.pgg,local_index = iconId - 6 * 1000,goods_types=[6],VERIFIED
+7,res/data/pgg/7.pgg,local_index = iconId - 7 * 1000,goods_types=[7],VERIFIED

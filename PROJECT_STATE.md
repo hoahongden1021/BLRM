@@ -17,6 +17,14 @@ are **packet fields** (`RoleQuickUse` / `processSkillDetail`), not conf columns.
 See `docs/research/SKILL_CLASS_WEAPON_MAP.md` + `skill_family_catalog.csv`.
 No server code changed. No class inferred from ID prefix or skill name.
 
+Research (2026-09-24, entity↔image catalog): visual/source-backed HTML+CSV
+catalog under `docs/research/entity_image_catalog.html` + `catalog_*.csv`.
+VERIFIED chains: objectDataId→obj→img slots; goods iconId→pgg GOOGS_PNG[type];
+skill iconId→pgg 5 (packet field). UNKNOWN static joins kept UNKNOWN
+(skill/item icon tables, ModelID→obj, prop PNG keys). Counts: 377 objects,
+2027 images (303 obj-linked), NPC512/monster624/mount108/weapon720/fabao30/skills384.
+See `docs/research/ENTITY_IMAGE_CATALOG.md`. No server code changed.
+
 Latest milestone (2026-09-22, clean run 112928): one diagnostic GNPC now renders
 and can be selected in the real Android client. VERIFIED only for this minimal
 cmd132 path: TEST OBJ1014, synthetic runtime ID220010, APK object1014/image7197,

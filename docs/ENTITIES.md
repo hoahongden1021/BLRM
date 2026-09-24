@@ -32,6 +32,16 @@ Do not infer entity identity from visual similarity alone.
 - Detail: `docs/research/SKILL_CLASS_WEAPON_MAP.md`.
 Do not invent a family→class assignment from names or ID prefixes.
 
+## Entity ↔ image catalog (2026-09-24)
+
+- Full visual catalog: `docs/research/entity_image_catalog.html` +
+  `ENTITY_IMAGE_CATALOG.md` + `catalog_*.csv`.
+- objectDataId→obj→img: **VERIFIED** for all 377 objects (295 with image slots).
+- Goods/skill icons: **packet iconId** → pgg groups (GOOGS_PNG / group 5); no
+  static skill/item→icon table in conf or DEX.
+- NPC/monster/mount ModelID→objectDataId: still **UNKNOWN** (name tables only).
+Do not name an obj/img from screenshots alone.
+
 ---
 
 ## Tutorial-relevant names

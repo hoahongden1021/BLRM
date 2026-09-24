@@ -42,6 +42,27 @@ CSV `docs/research/skill_family_catalog.csv` (DESCRIPTION_ONLY).
 
 ---
 
+## Entity ↔ image catalog (2026-09-24)
+
+Catalog: `docs/research/ENTITY_IMAGE_CATALOG.md` + `entity_image_catalog.html`
++ `catalog_*.csv` under `docs/research/`.
+
+- **VERIFIED** object appearance chain: `objectDataId` → `res/data/obj/{id}.obj`
+  image-slot shorts → `res/data/img/{imgId}.img`. All 377 objs parse; 295 have
+  ≥1 image slot; 303/2027 images referenced by objs; 1724 unmatched (not identity).
+- **VERIFIED** goods icon rule: packet `iconId` + goods `type` → pgg group
+  `GOOGS_PNG[type]` (`{0,1,2,2,2,5,6,7}`), index `iconId - type*1000`
+  (`GDataManager.MAX_M=1000`; `GPNGGroupData.getIconIdList`).
+- **VERIFIED** skill icon rule: packet `RoleSkill.iconId` → pgg group **5**
+  (`RoleSkillList.setIconList`; PC logs `skill id / png id` from `M.s`).
+- **UNKNOWN** static joins: skill id→iconId, item id→iconId, ModelID→obj,
+  `prop/{id}.png` entity key. Name tables (NPC 512 / monster 624 / mount 108 /
+  weapon 720 / fabao 30 / skill 384) have **no** icon/object columns.
+- CANDIDATE: `anuId≥9000` skill effect from `apk_skill_effects.json` (not Original DEX).
+No server code changed. No identity assigned from visual resemblance.
+
+---
+
 ## Current milestone
 
 The project has crossed the minimum world-entry milestone:
