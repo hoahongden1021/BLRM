@@ -37,16 +37,22 @@ def load_ast_helpers():
     target_names = [
         'MAGIC', 'mkframe', 'parse_frames', 'decode_client_move133',
         'parse_update_resource_request', 'resource_chunk_bodies',
-        'missing_resource_clear_body'
+        'missing_resource_clear_body', 'pstr', 'npc_view_body',
+        'data_spawn_entities',
     ]
 
     selected_nodes = []
 
-    # Walk the AST to find specific definitions
+    # Walk the AST to find specific definitions / module-level assignments.
+    # DATA_SPAWN / DATA_SPAWN_FIXTURES are injected below (fixture assign would
+    # work, but DATA_SPAWN reads os.environ which this loader does not import).
+    assign_ok = {'MAGIC'}
     for node in ast.walk(tree):
-        if isinstance(node, ast.Assign) and node.targets and node.targets[0].id == 'MAGIC':
-            selected_nodes.append(node)
-        elif isinstance(node, ast.FunctionDef) and node.name in target_names[1:]:
+        if isinstance(node, ast.Assign) and node.targets:
+            tgt = node.targets[0]
+            if isinstance(tgt, ast.Name) and tgt.id in assign_ok:
+                selected_nodes.append(node)
+        elif isinstance(node, ast.FunctionDef) and node.name in target_names:
             selected_nodes.append(node)
 
     # Build the minimal module
@@ -58,6 +64,11 @@ def load_ast_helpers():
         "__builtins__": __builtins__,
         "struct": struct,
         "Path": Path,
+        # data_spawn_entities path (switch-off must not need ROLE/os)
+        "DATA_SPAWN": False,
+        "DATA_SPAWN_FIXTURES": (),
+        "current_scene_id": lambda: 9068,
+        "_validated_probe_entity": lambda **kw: dict(kw),
     }
 
     # Execute the module to define the required names in scope
@@ -79,8 +90,11 @@ try:
     # Smoke Test: Check if helpers were loaded
     helpers = [
         "MAGIC", "mkframe", "parse_frames", "decode_client_move133",
-        "parse_update_resource_request", "resource_chunk_bodies", "missing_resource_clear_body"
+        "parse_update_resource_request", "resource_chunk_bodies",
+        "missing_resource_clear_body", "pstr", "npc_view_body",
+        "data_spawn_entities", "DATA_SPAWN", "DATA_SPAWN_FIXTURES",
     ]
+    # DATA_SPAWN* are injected defaults, not AST-loaded (see loader comments).
 
     found_helpers = []
     for name in helpers:
@@ -102,13 +116,19 @@ except Exception as e:
 # --- STEP 4-11: TEST IMPLEMENTATION ---
 
 class TestV026Baseline(unittest.TestCase):
-    # Rule 3: Access functions directly from the scope
-    mkframe = server_scope["mkframe"]
-    parse_frames = server_scope["parse_frames"]
-    decode_client_move133 = server_scope["decode_client_move133"]
-    parse_update_resource_request = server_scope["parse_update_resource_request"]
-    resource_chunk_bodies = server_scope["resource_chunk_bodies"]
-    missing_resource_clear_body = server_scope["missing_resource_clear_body"]
+    # Rule 3: Access functions directly from the scope.
+    # staticmethod keeps plain functions from becoming bound methods (self
+    # would otherwise shift every positional argument).
+    mkframe = staticmethod(server_scope["mkframe"])
+    parse_frames = staticmethod(server_scope["parse_frames"])
+    decode_client_move133 = staticmethod(server_scope["decode_client_move133"])
+    parse_update_resource_request = staticmethod(
+        server_scope["parse_update_resource_request"]
+    )
+    resource_chunk_bodies = staticmethod(server_scope["resource_chunk_bodies"])
+    missing_resource_clear_body = staticmethod(
+        server_scope["missing_resource_clear_body"]
+    )
 
     # 4. MKFRAME TESTS
     def test_mkframe_empty(self):
@@ -124,12 +144,15 @@ class TestV026Baseline(unittest.TestCase):
 
     def test_mkframe_negative(self):
         # D. negative command -42
+        # Layout: MAGIC u16 | len u16 | sid u8 | sess u32 | cmd i16 | body
+        # cmd starts at offset 9 (2+2+1+4), not 8.
         cmd = -42
         payload = b'test'
         actual = self.mkframe(cmd, body=payload, sid=1, sess=1)
-        self.assertEqual(struct.unpack(">h", actual[8:10]), cmd)
+        self.assertEqual(struct.unpack(">h", actual[9:11])[0], cmd)
 
     # 5. PARSE_FRAMES — NORMAL
+    # parse_frames returns (fr, wire, sid, sess, cmd, body)
     def test_parse_frames_normal(self):
         sid, sess, cmd = 1, 1, 0x0001
         body = b'test'
@@ -140,10 +163,10 @@ class TestV026Baseline(unittest.TestCase):
         self.assertEqual(len(results), 1)
         res = results[0]
         self.assertEqual(res[1], "NORMAL")
-        self.assertEqual(res[3], sid)
-        self.assertEqual(res[4], sess)
-        self.assertEqual(res[5], cmd)
-        self.assertEqual(res[6], body)
+        self.assertEqual(res[2], sid)
+        self.assertEqual(res[3], sess)
+        self.assertEqual(res[4], cmd)
+        self.assertEqual(res[5], body)
 
         # Buffer must be fully consumed (remaining data = 0)
         remaining_buffer = bytearray(frame)[len(frame):]
@@ -160,10 +183,10 @@ class TestV026Baseline(unittest.TestCase):
         self.assertEqual(len(results), 1)
         res = results[0]
         self.assertEqual(res[1], "FE-PREAUTH")
-        self.assertEqual(res[3], sid)
-        self.assertEqual(res[4], sess)
-        self.assertEqual(res[5], cmd)
-        self.assertEqual(res[6], body)
+        self.assertEqual(res[2], sid)
+        self.assertEqual(res[3], sess)
+        self.assertEqual(res[4], cmd)
+        self.assertEqual(res[5], body)
 
         # Buffer must be fully consumed
         remaining_buffer = bytearray(frame)[len(frame):]
@@ -172,20 +195,27 @@ class TestV026Baseline(unittest.TestCase):
 
     # 7. PARSE_FRAMES — BUFFER BEHAVIOR
     def test_parse_frames_incomplete(self):
-        # Valid frame minus last byte
-        frame = struct.pack(">HHBIh", server_scope["MAGIC"], 11, 1, 1, 1, b't')[:-1]
+        # Valid frame minus last body byte: MAGIC,len,sid,sess,cmd then partial body
+        full = struct.pack(
+            ">HHBIh", server_scope["MAGIC"], 11, 1, 1, 1
+        ) + b't'
+        frame = full[:-1]
         results = self.parse_frames(bytearray(frame))
         self.assertEqual(len(results), 0) # Frame must remain buffered
 
     def test_parse_frames_two_complete(self):
-        frame1 = struct.pack(">HHBIh", server_scope["MAGIC"], 11, 1, 1, 1, b'body')
-        frame2 = struct.pack(">HHBIh", server_scope["MAGIC"], 11, 2, 2, 2, b'other')
+        frame1 = struct.pack(
+            ">HHBIh", server_scope["MAGIC"], 13, 1, 1, 1
+        ) + b'body'
+        frame2 = struct.pack(
+            ">HHBIh", server_scope["MAGIC"], 14, 2, 2, 2
+        ) + b'other'
         combined = frame1 + frame2
 
         results = self.parse_frames(bytearray(combined))
         self.assertEqual(len(results), 2)
-        self.assertEqual(results[0][5], 1)
-        self.assertEqual(results[1][5], 2)
+        self.assertEqual(results[0][4], 1)  # cmd
+        self.assertEqual(results[1][4], 2)
         remaining_buffer = bytearray(combined)[len(combined):]
         self.assertEqual(len(remaining_buffer), 0)
 
@@ -318,6 +348,109 @@ class TestV026Baseline(unittest.TestCase):
         dtype, rid = 0x02, 0x0055
         expected = bytes([0, 1, dtype]) + struct.pack(">h", rid)
         self.assertEqual(self.missing_resource_clear_body(dtype, rid), expected)
+
+    # 12. NPC VIEW BODY (cmd132 GNPC add) — decode field order from encoder
+    def test_npc_view_body_header_and_fields(self):
+        body = server_scope["npc_view_body"](
+            sprite_id=220010, name="TEST OBJ1014", level=1, object_data_id=1014,
+            x=203, y=253, hp=100, max_hp=100, mp=100, max_mp=100,
+            can_select=1, can_hit=0, speed=40,
+            appearance_effect_gate=1, flags=bytes([3]),
+        )
+        # Header: spriteId i32, spriteType i8=2, exType i8, gate i8, remove i8=0
+        sprite_id = struct.unpack(">i", body[0:4])[0]
+        sprite_type, ex_type, gate, remove = body[4], body[5], body[6], body[7]
+        self.assertEqual(sprite_id, 220010)
+        self.assertEqual(sprite_type, 2)
+        self.assertEqual(ex_type, 0)
+        self.assertEqual(gate, 1)
+        self.assertEqual(remove, 0)
+
+        # GNPC: x,y i16; autoControl i8; initialState i8
+        x, y = struct.unpack(">hh", body[8:12])
+        auto_ctl, initial_state = body[12], body[13]
+        self.assertEqual(x, 203)
+        self.assertEqual(y, 253)
+        self.assertEqual(auto_ctl, 0)
+        self.assertEqual(initial_state, 0)
+
+        # block C: canSelect, canHit, relationState; then HP/MP i32 x4
+        can_select, can_hit, relation = body[14], body[15], body[16]
+        hp, max_hp, mp, max_mp = struct.unpack(">iiii", body[17:33])
+        self.assertEqual(can_select, 1)
+        self.assertEqual(can_hit, 0)
+        self.assertEqual(relation, 0)
+        self.assertEqual((hp, max_hp, mp, max_mp), (100, 100, 100, 100))
+
+        # name str: u16 length + utf-8
+        name_len = struct.unpack(">H", body[33:35])[0]
+        name = body[35:35 + name_len].decode("utf-8")
+        self.assertEqual(name, "TEST OBJ1014")
+        pos = 35 + name_len
+        # ignored byte, flagCount=1, flag[0]=3, trigger=0, country=0, speed, level
+        self.assertEqual(body[pos], 0)          # ignored
+        self.assertEqual(body[pos + 1], 1)      # flag count
+        self.assertEqual(body[pos + 2], 3)      # flag byte
+        self.assertEqual(body[pos + 3], 0)      # trigger_event
+        self.assertEqual(body[pos + 4], 0)      # country
+        self.assertEqual(body[pos + 5], 40)     # speed u8
+        self.assertEqual(body[pos + 6], 1)      # level u8
+        object_data_id = struct.unpack(">h", body[pos + 7:pos + 9])[0]
+        self.assertEqual(object_data_id, 1014)
+
+        # block V: imageCount i8=0, actionType/actionId/direction i8 x3 = 0
+        v = pos + 9
+        self.assertEqual(body[v], 0)
+        self.assertEqual(body[v + 1:v + 4], bytes([0, 0, 0]))
+        self.assertEqual(body[v + 4], -1 & 0xFF)  # horse marker -1 as signed byte
+        self.assertEqual(body[v + 5], 0)          # buffCount
+        self.assertEqual(body[v + 6], 0)          # ignored view byte
+        self.assertEqual(body[v + 7], -1 & 0xFF)  # wuxing
+        self.assertEqual(body[v + 8], -1 & 0xFF)  # fabao
+        self.assertEqual(len(body), v + 9)
+
+    def test_npc_view_body_rejects_zero_max_mp(self):
+        with self.assertRaises(ValueError):
+            server_scope["npc_view_body"](
+                sprite_id=1, name="X", level=1, object_data_id=1014,
+                x=0, y=0, hp=1, max_hp=1, mp=0, max_mp=0,
+                can_select=1,
+            )
+
+    # 13. DATA-DRIVEN SPAWN SWITCH — OFF must stay empty / ON uses fixtures
+    def test_data_spawn_switch_off_returns_empty(self):
+        server_scope["DATA_SPAWN"] = False
+        server_scope["DATA_SPAWN_FIXTURES"] = (
+            {"label": "TEST", "name": "TEST OBJ1014", "object_data_id": 1014},
+        )
+        self.assertEqual(server_scope["data_spawn_entities"](), [])
+
+    def test_data_spawn_switch_on_uses_test_fixture_first(self):
+        server_scope["DATA_SPAWN"] = True
+        server_scope["DATA_SPAWN_FIXTURES"] = (
+            {
+                "label": "TEST",
+                "sprite_id": 220010,
+                "name": "TEST OBJ1014",
+                "object_data_id": 1014,
+                "x": 203,
+                "y": 253,
+                "flags": bytes([3]),
+            },
+        )
+        server_scope["current_scene_id"] = lambda: 9068
+        ents = server_scope["data_spawn_entities"]()
+        self.assertEqual(len(ents), 1)
+        self.assertEqual(ents[0]["name"], "TEST OBJ1014")
+        self.assertEqual(ents[0]["object_data_id"], 1014)
+        self.assertNotIn("label", ents[0])
+
+    def test_data_spawn_switch_on_wrong_scene_raises(self):
+        server_scope["DATA_SPAWN"] = True
+        server_scope["DATA_SPAWN_FIXTURES"] = ({"name": "TEST"},)
+        server_scope["current_scene_id"] = lambda: 7000
+        with self.assertRaises(ValueError):
+            server_scope["data_spawn_entities"]()
 
 
 # --- STEP 13: RUN ---

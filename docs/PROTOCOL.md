@@ -49,7 +49,26 @@ Status: `VERIFIED`
 | 133 | C -> S | player movement update | PARTIAL |
 | 132 | S -> C | visible entity/sprite spawn/update family | PARTIAL |
 | 9 | S -> C | NPC navigation-list add/remove, separately read from cmd132 | PARTIAL |
+| 9 | C -> S | `sendGetNpcListInSceneMessage` body=`putShort(scene.intId)` — **no call sites found** in JADX or smali | PARTIAL (definition only) |
 | 614 | C -> S | observed post-join client request; exact semantic not yet documented | UNKNOWN |
+
+### cmd9 vs sprite visibility (2026-09-25)
+
+Status: `PARTIAL` (static call-graph; no revived-client packet capture this session).
+
+- Client **request** path: only `GameWorld.sendGetNpcListInSceneMessage()` (`:18694`)
+  serializes cmd9 with `scene.intId`. Grep of all JADX sources and apktool smali
+  found **zero** callers of that method and zero `SendData(9,` sites. The method
+  exists but is unused in the inspected 1.17 tree.
+- Client **response** path: `processNpcLeadListInSceneMessage` (`:8800`) fills
+  `npcListInScene` only. Consumers: `refreshNpcList` → `readyNpcList` →
+  `FoundNPC.bin` “NPC引导” list, pathing/transport via `NpcListId`. No
+  `scene.addSprite` / GNPC creation on this path.
+- Sprite visibility: cmd132 `processViewSpriteMessage` (`:12681`) creates GNPC
+  and calls `scene.addSprite` (`GScene.java:625`), then `visibleReady=true`.
+  Independent of cmd9.
+- Conclusion: **missing map sprites are not caused by omitting cmd9.** cmd9 only
+  feeds the NPC guide/list UI. Do not treat cmd9 as a prerequisite for rendering.
 
 ---
 

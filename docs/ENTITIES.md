@@ -28,6 +28,13 @@ objectDataId is the Original appearance identity (not ModelID). Original
 tutorial objectDataId and spawn XY remain UNKNOWN; BLRM never sends cmd9.
 See `docs/research/MAP_SPAWN_OBJECT_CHAIN_PROPOSAL.md`.
 
+cmd9 role (2026-09-25, static call-graph): `sendGetNpcListInSceneMessage` has
+**no callers** in the inspected 1.17 tree; cmd9 response only populates the
+NPC guide list (`readyNpcList` / `FoundNPC.bin` / “NPC引导”). Sprite visibility
+comes from cmd132 → `scene.addSprite`. Omitting cmd9 does **not** explain
+missing map sprites. Data-driven spawn gate: `TRUTHAN_DATA_SPAWN` (default OFF),
+first fixture TEST OBJ1014. Status `PARTIAL` until a real-client sequence.
+
 ## Character classes / skills (2026-09-24)
 
 - Occupations (original): 力士(0), 刺客(1), 唤雷师(2), 天师(3), 武神(4), 圣仙(5);

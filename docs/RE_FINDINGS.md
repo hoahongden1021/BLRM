@@ -23,9 +23,33 @@ Proposal: `docs/research/MAP_SPAWN_OBJECT_CHAIN_PROPOSAL.md`.
 - BLRM `npc_view_body` field order **matches** DEX (no layout bug). Gaps:
   original objectDataId for tutorial NPCs `UNKNOWN`; original spawn XY
   `UNKNOWN`; **cmd=9 never sent** by server. First missing data fields are
-  objectDataId and XY; first missing companion packet is cmd9.
+  objectDataId and XY; first missing companion packet is cmd9 for the
+  **guide/list UI only** (see below) — not for sprite rendering.
 - VERIFIED example only: TEST OBJ1014, scene 9068, (203,253), run112928 —
-  not an original tutorial spawn. No server code changed.
+  not an original tutorial spawn.
+
+### cmd9 callers / sprite visibility (2026-09-25)
+
+- `sendGetNpcListInSceneMessage()` (`GameWorld.java:18694`) is the only cmd9
+  C→S encoder (`SendData(9,` + `putShort(scene.intId)`). **0 call sites** in
+  JADX sources and apktool smali outside the method definition.
+- cmd9 S→C fills `npcListInScene` only; UI via `readyNpcList` / `FoundNPC.bin`
+  (“NPC引导”), pathing/transport via `NpcListId`. No `scene.addSprite`.
+- Sprite visibility is cmd132 → `processViewSpriteMessage` → `scene.addSprite`.
+  Missing sprites are **not** explained by omitting cmd9.
+- Status: `PARTIAL` static call-graph; no revived-client cmd9/cmd132 sequence
+  captured this session (`REVIVED_REFERENCE` not claimed).
+
+### Data-driven spawn switch (2026-09-25)
+
+- New server gate `TRUTHAN_DATA_SPAWN` (default **OFF**): `data_spawn_entities()`
+  returns `[]` when off; when on, APK-validates `DATA_SPAWN_FIXTURES` starting
+  with TEST OBJ1014 (scene 9068 only). Login/map/movement paths unchanged.
+- Tests: `tests/test_v026_baseline.py` — cmd132 encode decode checks + switch
+  off/on/wrong-scene. Full suite: **21 OK** (`py -3 -m unittest tests.test_v026_baseline`).
+- Passive launch only (`py tools\truthan_gui.py launch` + screencap, no taps):
+  server/reverse came up; client TCP connected then `peer_eof` without login/
+  map-entry; **no cmd132 captured**; `game_connected=false`. Not a client PASS.
 
 ---
 

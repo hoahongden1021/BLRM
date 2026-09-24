@@ -109,6 +109,9 @@ PC/revived conf key only and never appears on the Original cmd132 path.
 IDs: `NpcListId` is i32 runtime id (same family as cmd132 spriteId), not
 objectDataId. X/Y are map coordinates for the nav marker.
 Status: `VERIFIED` field order from DEX. BLRM never emits cmd=9.
+Caller note (2026-09-25): `sendGetNpcListInSceneMessage` has **0 call sites**
+outside its definition (JADX + smali). cmd9 response feeds only the NPC guide
+list UI, not `scene.addSprite` — see `docs/PROTOCOL.md` cmd9 vs sprite visibility.
 
 ### 2.5 `cmd=323` — collection (gather) view
 
@@ -155,13 +158,14 @@ probe population `starter_probe_entities` `:744`, send path
 | **spawn X/Y** for tutorial NPCs | original server XY | fixed relative to `(180,230)` or probe `(203,253)` | **first missing position field** |
 | **spriteId** | original runtime id | synthetic `220010+` | candidate only |
 | image_ids (V1–V2) | optional overrides; `.obj` embeds slots | default `()` empty | OK if objectDataId's `.obj` has image slots (`VERIFIED` OBJ1014 path) |
-| **cmd=9 NPC nav list** | mode0 entries with i32 id, name, XY | **never sent** | **first missing companion packet** |
+| **cmd=9 NPC nav list** | mode0 entries with i32 id, name, XY | **never sent** | missing for **guide/list UI only**; not required for cmd132 sprite visibility |
 | cmd=323 collections | gather nodes | never sent | out of scope until collection NPC data exists |
 | ModelID on wire | Original has no ModelID field | not sent | N/A (`REJECTED` as required field) |
 
 There is **no incorrect field order** in `npc_view_body` relative to the DEX
 reader. The gaps are **data identity** (objectDataId, XY, real spriteIds) and
-the **missing cmd=9 list**, not a mis-ordered cmd132 body.
+the **missing cmd=9 list for the guide UI** (cmd9 is not a sprite prerequisite),
+not a mis-ordered cmd132 body.
 
 ## 5. One VERIFIED example entity (map + position)
 

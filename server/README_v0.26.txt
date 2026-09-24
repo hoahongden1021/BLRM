@@ -71,6 +71,20 @@ LUU Y
 TRUTHAN_EXPERIMENTAL_SPAWN=1 van duoc giu de tuong thich va bat ca hai probe,
 nhung nen dung hai bien NPC_ASSET_PROBE / MOB_ASSET_PROBE rieng de de doc log.
 
+DATA-DRIVEN SPAWN (2026-09-25)
+------------------------------
+Default OFF. Enable only for the evidence-backed fixture list:
+
+    set TRUTHAN_DATA_SPAWN=1
+    set TRUTHAN_SCENE=9068
+    py truthan_local_server_v026.py
+
+First fixture is TEST OBJ1014 at (203,253) scene 9068 (run112928 probe).
+When TRUTHAN_DATA_SPAWN is off/absent, data_spawn_entities() returns [] and
+login/map/movement are unchanged. Use 03_test_data_spawn.bat for a capture run.
+cmd9 is NOT required for sprite visibility (guide/list UI only); see
+docs/PROTOCOL.md.
+
 Server hien van la single-user reverse scaffold. ROLE van global. Protocol phan
 da reverse se duoc tach Session/Character/World/AOI/DB khi gameplay flow duoc
 khoi phuc du.

@@ -3,6 +3,17 @@
 Last known stable baseline: **LocalServer v0.26**
 Current emphasis: **reverse real NPC/mob spawn + starter tutorial flow without guessing**
 
+Research + server (2026-09-25): cmd9 caller trace complete —
+`sendGetNpcListInSceneMessage` has **0 call sites** (JADX+smali); cmd9 response
+only fills the NPC guide/list UI (`readyNpcList`/`FoundNPC.bin`), not sprite
+visibility (cmd132 → `scene.addSprite`). New off-by-default data-driven spawn
+gate `TRUTHAN_DATA_SPAWN` + `DATA_SPAWN_FIXTURES` (TEST OBJ1014 first);
+`data_spawn_entities()` returns [] when switch is off. Tests: 21 OK including
+npc_view_body decode + switch-off/on/wrong-scene. New `03_test_data_spawn.bat`.
+No real-client map-entry capture this session; original objectDataId/XY still
+UNKNOWN. Evidence: `docs/PROTOCOL.md` (cmd9 vs sprite), `docs/RE_FINDINGS.md`,
+`docs/ENTITIES.md`, `docs/research/MAP_SPAWN_OBJECT_CHAIN_PROPOSAL.md`.
+
 Research (2026-09-25): spawn-chain static trace complete — cmd132/cmd9/cmd323
 field order VERIFIED from DEX; objectDataId→obj→img VERIFIED; ModelID not on
 Original wire; no spawn tables in TTpc/revived client files (bounded search 0 hits).

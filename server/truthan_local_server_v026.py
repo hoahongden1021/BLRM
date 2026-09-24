@@ -269,7 +269,39 @@ SINGLE_NPC_PROBE = os.environ.get("TRUTHAN_SINGLE_NPC_PROBE", "0") == "1"
 MOB_ASSET_PROBE = os.environ.get("TRUTHAN_MOB_ASSET_PROBE", "0") == "1"
 CAIYUN_OBJ_OVERRIDE = os.environ.get("TRUTHAN_CAIYUN_OBJ")
 HUOHUYAO_OBJ_OVERRIDE = os.environ.get("TRUTHAN_HUOHUYAO_OBJ")
+# Explicit data-driven spawn gate. OFF by default so login/map/movement and
+# clean-mode population stay unchanged unless the operator enables it.
+DATA_SPAWN = os.environ.get("TRUTHAN_DATA_SPAWN", "0") == "1"
 BIND_HOST = os.environ.get("TRUTHAN_BIND", "127.0.0.1")
+
+# Evidence-backed diagnostic fixtures only. First entry is the narrow
+# VERIFIED run112928 probe (TEST OBJ1014); never rename to a tutorial NPC.
+# Fields match npc_view_body(); "label" is documentation-only and not sent.
+DATA_SPAWN_FIXTURES = (
+    {
+        "label": "TEST",
+        "sprite_id": 220010,
+        "name": "TEST OBJ1014",
+        "level": 1,
+        "object_data_id": 1014,
+        "x": 203,
+        "y": 253,
+        "hp": 100,
+        "max_hp": 100,
+        "mp": 100,
+        "max_mp": 100,
+        "can_select": 1,
+        "can_hit": 0,
+        "speed": 40,
+        "auto_control_type": 0,
+        "initial_state": 0,
+        "action_type": 0,
+        "action_id": 0,
+        "direction": 0,
+        "appearance_effect_gate": 1,
+        "flags": bytes([3]),
+    },
+)
 
 def current_scene_id():
     if SCENE_OVERRIDE:
@@ -741,6 +773,25 @@ def _validated_probe_entity(**ent):
     return ent
 
 
+def data_spawn_entities():
+    """
+    Data-driven population behind TRUTHAN_DATA_SPAWN (default OFF).
+
+    When the switch is off this returns [] so the clean-mode path is unchanged.
+    When on, every fixture is APK-validated via _validated_probe_entity before
+    send; fixtures remain labelled TEST/OBJxxxx and are not original spawns.
+    """
+    if not DATA_SPAWN:
+        return []
+    if current_scene_id() != 9068:
+        raise ValueError("TRUTHAN_DATA_SPAWN fixtures require evidence-backed scene 9068")
+    out = []
+    for fix in DATA_SPAWN_FIXTURES:
+        row = {k: v for k, v in fix.items() if k != "label"}
+        out.append(_validated_probe_entity(**row))
+    return out
+
+
 def starter_probe_entities():
     """
     Controlled v0.26 diagnostic population.
@@ -757,6 +808,9 @@ def starter_probe_entities():
     visual candidates and are labelled OBJxxxx unless the operator explicitly
     selects one with TRUTHAN_CAIYUN_OBJ / TRUTHAN_HUOHUYAO_OBJ.
     """
+    if DATA_SPAWN:
+        return data_spawn_entities()
+
     cx, cy = SPAWN_X, SPAWN_Y
     out = []
 
@@ -1207,6 +1261,7 @@ print("  role list -> create role -> join -> country starter scene")
 print(f"  NPC asset probe: {'ON' if (NPC_ASSET_PROBE or CAIYUN_OBJ_OVERRIDE) else 'OFF'}")
 print(f"  single diagnostic NPC: {'TEST OBJ1014' if SINGLE_NPC_PROBE else 'OFF'}")
 print(f"  mob asset probe: {'ON' if (MOB_ASSET_PROBE or HUOHUYAO_OBJ_OVERRIDE) else 'OFF'}")
+print(f"  data-driven spawn fixtures: {'ON (TEST OBJ1014 first)' if DATA_SPAWN else 'OFF'}")
 print("Ctrl+C to stop")
 
 try:
