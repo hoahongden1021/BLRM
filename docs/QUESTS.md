@@ -2,9 +2,22 @@
 
 ## Current status
 
-Quest protocol is not yet reconstructed.
+Quest **accept/deliver wire protocol** is not yet reconstructed against the local server.
 
-Status: `UNKNOWN`
+Status: `UNKNOWN` (protocol)
+
+### Static quest tables (research 2026-09-24)
+
+- PC jar has loader `main.b.a.a.D` for `conf/Tasks_language.dat` (≥7 columns,
+  key + 6 string fields), but **`Tasks_language.dat` is absent** from the jar,
+  `TTpc\assets`, and the revived `TruThan.apk` `assets/conf/`. Runtime load → 0 rows.
+- Original Android 1.17 APK has **no** conf quest tables; UI strings live in
+  `Language/Language0–32.str` via `Language.getStr`.
+- On the original client, quest state is **packet-driven**: `RoleQuest` is built only
+  in `GameWorld.getFunctioRoleQuest()` (`GameWorld.java:2234`). Type/state/condition
+  enums are in `QuestConstants.java`. See `docs/research/PC_SKILLS_EQUIPMENT_QUESTS.md`.
+
+Status for static PC quest text source in these trees: `VERIFIED` **absent**.
 
 ---
 

@@ -4,6 +4,24 @@ This is the chronological technical notebook. Only stable conclusions should be 
 
 ---
 
+## PC gameplay conf tables (2026-09-24)
+
+Research catalog: `docs/research/PC_SKILLS_EQUIPMENT_QUESTS.md`.
+
+- `zsSkills_language.dat` → loader `main.b.a.a.A` (uppercase): 384 rows, 16 cols,
+  id 17101–17584; names/descriptions only; damage % only inside description prose.
+- 15 equipment/item language tables → `main.b.a.a.p`: combined 4603 keys, 7-col
+  name+desc only (no ATK/level columns).
+- `Tasks_language.dat` → `main.b.a.a.D`: file **missing** in jar, TTpc, and revived
+  APK; original 1.17 has zero conf tables. Quest runtime on original client is
+  packets → `RoleQuest` (`getFunctioRoleQuest`).
+- All sampled PC conf SHA-256 values equal revived APK `assets/conf/*`.
+
+Loader case trap: uppercase `A`/`D` are skills/tasks; lowercase `a`/`d` are
+achievement/`client_config.properties`.
+
+---
+
 ## Current milestone
 
 The project has crossed the minimum world-entry milestone:

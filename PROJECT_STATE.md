@@ -3,6 +3,12 @@
 Last known stable baseline: **LocalServer v0.26**
 Current emphasis: **reverse real NPC/mob spawn + starter tutorial flow without guessing**
 
+Research (2026-09-24): PC skill/equipment conf language tables decoded with jar
+loaders (`A`/`p`); `Tasks_language.dat` proven absent in jar/TTpc/revived/original;
+Android quests/skills/goods are packet-driven (`getFunctioRoleQuest`,
+`readRoleSkill`, `readGoods`). Catalog: `docs/research/PC_SKILLS_EQUIPMENT_QUESTS.md`.
+No server code changed. No quest IDs guessed.
+
 Latest milestone (2026-09-22, clean run 112928): one diagnostic GNPC now renders
 and can be selected in the real Android client. VERIFIED only for this minimal
 cmd132 path: TEST OBJ1014, synthetic runtime ID220010, APK object1014/image7197,
