@@ -73,3 +73,41 @@ scene metadata and optional background. Its decoration loop allocates pool type
 mirror flags; it does not read an NPC name. This loader does not supply an
 authoritative 彩云仙子 named-spawn record. Exact smali methods are retained in
 docs/research/entity_spawn_smali.txt. No map data or server map behavior changed.
+
+## 2026-09-25: full decode of APK `data/scn/9068.scn`
+
+Status: `VERIFIED` field layout from `GScene.init` / `initFromJar` + `GZIP.inflate`.
+Decoder: session temp script (no repo write) → JSON dump of every parsed field.
+Source APK entry: `data/scn/9068.scn` (4331 B gzip → 7969 B inflated).
+
+Parsed fields (order matches `GScene.init`):
+
+| Field | Value | Notes |
+|---|---|---|
+| `map_gw` | `45` | grid width in cells |
+| `map_gh` | `60` | grid height in cells |
+| cells | `2700` | gw×gh |
+| tile image groups | `9` ids: 15010,16001,16000,16025,14010,10010,16015,16042,16039 | via `initTileImageData` |
+| tile anims | `27` | `GTileAnimData` |
+| block-type counts | `{0:513,1:17,2:12,3:13,4:9,5:7,6:5,7:12,8:6,9:2,11:4,13:2100}` | low nibble of first short per cell (`getGridBlock:1443`) |
+| GDoodadObject | `17` | obj 15051 / 15052 / 14016, static decorations with grid gx/gy — **not** NPC/mob spawns |
+| transfer areas | `1` | `GTransferArea` |
+| back_color / map_type / country / world_map / music / name / entrance | present | name/music parsed; back layer follows |
+| back layer | `299` bytes residual | `GSceneBackLayer.init` not yet parsed |
+
+Walkability (from `GScene.canCross:711` + `HITMASK` 12×16 + `BYTEMASK`):
+
+- block `13` = fully blocked (2100 cells in this map — open terrain dominates elsewhere);
+- otherwise `BYTEMASK[remX>>1] & HITMASK[block-1][remY]`;
+- server spawn `(180,230)` → block `0` → **walkable**;
+- fixture `(203,253)` → block `0` → **walkable**;
+- reconstructed monster `(196,238)` → block `0` → **walkable**.
+
+Entity positions: `.scn` contains **no NPC/mob spawn table**. Only static doodads
+have grid positions. Original tutorial NPC/mob spawn XY remains `UNKNOWN`
+(never guessed from doodad coords).
+
+Evidence: APK `data/scn/9068.scn`, `build/research/jadx/sources/com/t4game/GScene.java`
+(`init:1513`, `readMapData:316`, `canCross:711`, `getGridBlock:1443`),
+`GSceneBackLayer.java`, `GDoodadObject.java`, `GTransferArea.java`,
+`GTileAnimData.java`, `GUtil.java:23–24` (`BYTEMASK`/`HITMASK`).

@@ -158,6 +158,55 @@ This screen is a pre-game entry/menu screen and maps to `LOGIN_OR_ENTRY`, not `I
 
 Do not classify `IN_GAME` from OCR menu text alone. `IN_GAME` still requires runtime-state proof (active game connection, concrete scene id, and player coordinates).
 
+## Session observations (2026-09-25, task 5 PARTIAL)
+
+Status of this session's bootstrap: **PARTIAL — auth VERIFIED, stuck at NETWORK_ERROR before server list / role list.** No visual PASS.
+
+- Fresh launch with `TRUTHAN_DATA_SPAWN=1` + `TRUTHAN_SCENE=9068` (same shell before
+  `py tools\truthan_gui.py launch`; ROLE country=1 defaults to 8068, override required).
+  `runtime_state` scene id **9068**, `game_connected=false`.
+- Device `emulator-5554`, physical 1344×2992; screenshot landscape 2992×1344;
+  `input tap` uses landscape coords = OCR box coords directly (no scaling).
+- START_MENU observed: `诛神`/`仙境悟道`/`开始游戏`/`G快速进入`/`修复游戏`/`退出游戏`,
+  version string `0.17.00, 05020800`. Tap center ~`(2420,578)` or `(2445,576)` → ACCOUNT_LOGIN.
+- ACCOUNT_LOGIN observed: `账号:` / `admin123` prefilled / `密码:` / `登录游戏` /
+  `注册账号` / `个人中心` / `修改密码` / `zs000.lvh.me` / `选择` / `返回`.
+  Tap `登录游戏` ~`(1410,546)` or `(1412,547)`.
+- Taps are **focus-then-activate**: single tap does nothing; double-tap ~700ms apart
+  activates; UI lag 3–5s (matches earlier `pointEvent` finding: actionType=-1 select,
+  actionType=0 activate). `adb input tap` ADB success alone does not prove the game
+  received the button event.
+- `truthan_bootstrap_step.py` always performs its own fresh launch + requires exact
+  prior state — fails with `before state mismatch` if screen not yet classified.
+  Do **not** use it for multi-step progress; step manually with `truthan_gui.py tap`.
+- Auth VERIFIED (packet log `20260925_005625_p29000_..._60090.log`): client RX cmd42
+  `admin123`; server TX cmd=-42 (`0xFFD6`) auth_body = success 1 + phoneBound 0 +
+  userId 10001 + serverCount 1 + (id 1, `Local Test`, `127.0.0.1:19000`, status 0,
+  roleCount 0, empty string). Layout matches `T4game.processLoginMessage` (b==1) →
+  `processServerList` → `Authenticate.ReturnBack` → MainMenu view -5 (server list).
+  Server select → `StartGame.relink(addr)` → `TcpNetwork` `connection="socket://"+addr`.
+  `MainMenu` blocks select if `serverList[i][5] != ""`.
+- Post-auth blocker: client closes 29000 (peer_eof), opens 19000
+  (`20260925_005839_p19000`) then **immediately peer_eof with zero frames** — never
+  sent cmd277 FE-PREAUTH. UI: NETWORK_ERROR `网络故障，请重新登录` /
+  `网络错误，请重新登录` + `确定` + `读取中...N%` progress; loading climbs to 100%
+  then **stays stuck** (dialog did not dismiss on tap). `GameScreen.tick` sets
+  State 100 when `TcpNetwork.tcpState` not `TCP_OPEN`/`TCP_NORMAL_STATE`; `MainMenu`
+  case -4 with `isHttp` shows the same text. Cause **UNKNOWN** (candidates:
+  `TcpNetwork(StartGame,str)`/`open()` failure, `isHttp` path, server-list parse
+  exception, or shared static `tcpState` errored when auth socket closed).
+- The working 19000 flows in logs (`20260925_004640`, `20260925_005222`,
+  cmd277→20→6→7→32→10→132) are **Python integration-test clients, not the Android
+  client** — they confirm both cmd132 fixtures encode correctly.
+- Android client never reached server list, role list, or IN_GAME this session.
+  Whether NPC/monster rendered is **unverified — no visual PASS.**
+- New screenshots: `runtime/agent/screenshots/step*.png`, `poll*.png`, `rapid*.png`,
+  `wait*.png`, `fin*.png`, `after_determine.png`, `after_d2.png` (old
+  `datas_spawn_passive*.png` are UTF-16-mangled).
+- Evidence: `docs/PROTOCOL.md` (auth layout + post-auth blocker), `docs/RE_FINDINGS.md`
+  (this session's bootstrap section), packet logs under `server/truthan_packet_logs/`,
+  `runtime_state.json`.
+
 ## Required state model
 
 Use these logical states only after corresponding runtime evidence is observed:

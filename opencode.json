@@ -33,14 +33,14 @@
     "bash": "allow",
     "read": "allow",
     "write": "allow",
-    "edit": "allow",
-"external_directory": {
-  "C:/Users/Mech/Desktop/TTpc/**": "allow",
-  "C:/Users/Mech/Desktop/BLRM-local-inputs/**": "allow"
-},
-"edit": {
-  "C:/Users/Mech/Desktop/TTpc/**": "deny",
-  "C:/Users/Mech/Desktop/BLRM-local-inputs/**": "deny"
-}
+    "edit": {
+      "default": "allow",
+      "C:/Users/Mech/Desktop/TTpc/**": "deny",
+      "C:/Users/Mech/Desktop/BLRM-local-inputs/**": "deny"
+    },
+    "external_directory": {
+      "C:/Users/Mech/Desktop/TTpc/**": "allow",
+      "C:/Users/Mech/Desktop/BLRM-local-inputs/**": "allow"
+    }
   }
 }

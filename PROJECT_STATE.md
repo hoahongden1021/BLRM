@@ -3,6 +3,29 @@
 Last known stable baseline: **LocalServer v0.26**
 Current emphasis: **reverse real NPC/mob spawn + starter tutorial flow without guessing**
 
+Research + server (2026-09-25, session continuation): `opencode.json` duplicate
+`edit` keys fixed (TTpc/`BLRM-local-inputs` still deny; write unchanged;
+`NO_DUP_KEYS_OK`). Integration test `tests/test_map_entry_integration.py`
+real-socket map-entry path green: JOIN reply is **cmd7**; full suite **23 OK**.
+APK `data/scn/9068.scn` fully decoded via `GScene.init` (45×60 grid, walkable
+spawn/fixture/monster, **no spawn table** — original XY still UNKNOWN; residual
+299 B = back layer unparsed). Second `DATA_SPAWN_FIXTURES` entry added: TEST
+OBJ1155 sprite 220011 `can_hit=1` label `RECONSTRUCTED` at (196,238) walkable;
+assets IMG1207 VERIFIED. Server `send()` no longer crashes on Chinese
+`print(label)` under cp1252.
+
+Real-client bootstrap (2026-09-25, task 5 **PARTIAL**): fresh launch with
+`TRUTHAN_DATA_SPAWN=1` + `TRUTHAN_SCENE=9068`; OCR START_MENU →
+ACCOUNT_LOGIN → auth cmd42/−42 **VERIFIED** (packet log
+`20260925_005625_p29000`, layout matches `processLoginMessage`/
+`processServerList`). Post-auth: client opens 19000 then **immediately
+peer_eof, zero cmd277**; UI stuck NETWORK_ERROR `网络错误` + `读取中...100%`
+(State 100 / `tcpState` not OPEN). Cause **UNKNOWN**. Android client never
+reached server list, role list, or IN_GAME — **no visual PASS**; entity
+rendering this session unverified. Taps need focus-then-activate
+(double-tap ~700ms); UI lag 3–5s. Evidence: `docs/PROTOCOL.md`,
+`docs/AUTOMATION_BOOTSTRAP.md`, `docs/RE_FINDINGS.md`.
+
 Research + server (2026-09-25): cmd9 caller trace complete —
 `sendGetNpcListInSceneMessage` has **0 call sites** (JADX+smali); cmd9 response
 only fills the NPC guide/list UI (`readyNpcList`/`FoundNPC.bin`), not sprite

@@ -4,6 +4,50 @@ This is the chronological technical notebook. Only stable conclusions should be 
 
 ---
 
+## Real-client auth + post-auth bootstrap (2026-09-25)
+
+Status: auth `VERIFIED`; post-auth network-error `UNKNOWN` (task 5 PARTIAL).
+
+- Fresh launch with `TRUTHAN_DATA_SPAWN=1` + `TRUTHAN_SCENE=9068` (ROLE
+  country=1 defaults to 8068 — override required): server pid, all ports,
+  adb reverse rules OK. `runtime_state` scene id **9068**.
+- OCR screens VERIFIED: START_MENU (`诛神`/`仙境悟道`/`开始游戏`/`G快速进入`/
+  `修复游戏`/`退出游戏`, version `0.17.00, 05020800`) → tap `(2420,578)` or
+  `(2445,576)` → ACCOUNT_LOGIN (`账号:`/`admin123` prefilled/`密码:`/
+  `登录游戏`/`注册账号`/`个人中心`/`修改密码`/`zs000.lvh.me`/`选择`/`返回`)
+  → tap `登录游戏` `(1410,546)`.
+- Taps are **focus-then-activate**: single tap does nothing; double-tap
+  ~700ms apart activates; UI lag 3–5s. Landscape screenshot 2992×1344;
+  `input tap` uses landscape coords = OCR box coords directly.
+- `truthan_bootstrap_step.py` always does its own fresh launch + requires
+  exact prior state — fails with `before state mismatch` if screen not yet
+  classified. Do **not** use for multi-step; step manually with
+  `truthan_gui.py tap`.
+- Auth VERIFIED (`20260925_005625_p29000_..._60090.log`): client RX cmd42
+  `admin123`; server TX cmd=-42 (`0xFFD6`) auth_body = success 1 + phoneBound
+  0 + userId 10001 + serverCount 1 + (id 1, `Local Test`,
+  `127.0.0.1:19000`, status 0, roleCount 0, `""`). Layout matches
+  `T4game.processLoginMessage` → `processServerList` →
+  `Authenticate.ReturnBack` → MainMenu view -5 (server list); select →
+  `StartGame.relink(addr)` → `TcpNetwork` `connection="socket://"+addr`.
+  `MainMenu` blocks select if `serverList[i][5] != ""`.
+- Post-auth blocker: client closes 29000 (peer_eof), opens 19000
+  (`20260925_005839`) then **immediately peer_eof with zero frames** — never
+  sent cmd277. UI stuck on NETWORK_ERROR `网络故障`/`网络错误，请重新登录` +
+  `确定` + `读取中...N%` (climbs to 100%, dialog does not dismiss).
+  `GameScreen.tick` State 100 when `tcpState` not OPEN/NORMAL; `MainMenu`
+  case -4 with `isHttp` shows same text. Cause **UNKNOWN** (candidates:
+  `TcpNetwork.open` failure, `isHttp` path, server-list parse, shared static
+  `tcpState` on auth close).
+- The working 19000 flows in logs (`004640`, `005222`) are **Python
+  integration-test clients**, not the Android client — they confirm both
+  cmd132 fixtures encode correctly.
+- `game_connected=false` throughout; **no visual PASS** — Android client
+  never reached server list, role list, or IN_GAME. Entity rendering on the
+  Android client this session is **unverified**.
+
+---
+
 ## Spawn chain map→spawn→objectDataId→OBJ/IMG (2026-09-25)
 
 Proposal: `docs/research/MAP_SPAWN_OBJECT_CHAIN_PROPOSAL.md`.
@@ -45,11 +89,31 @@ Proposal: `docs/research/MAP_SPAWN_OBJECT_CHAIN_PROPOSAL.md`.
 - New server gate `TRUTHAN_DATA_SPAWN` (default **OFF**): `data_spawn_entities()`
   returns `[]` when off; when on, APK-validates `DATA_SPAWN_FIXTURES` starting
   with TEST OBJ1014 (scene 9068 only). Login/map/movement paths unchanged.
-- Tests: `tests/test_v026_baseline.py` — cmd132 encode decode checks + switch
-  off/on/wrong-scene. Full suite: **21 OK** (`py -3 -m unittest tests.test_v026_baseline`).
+- Tests: `tests/test_v026_baseline.py` + `tests/test_map_entry_integration.py` —
+  cmd132 encode decode checks + switch off/on/wrong-scene + real socket map-entry
+  flow (cmd277→cmd7→cmd32→cmd10→cmd132). Full suite: **23 OK**.
+- Integration: JOIN reply is **cmd7** (not cmd6); server child must use
+  `PYTHONIOENCODING=utf-8` (Chinese scene name in `print(label)` crashed under
+  cp1252 before this fix; `send()` now catches `UnicodeEncodeError`).
 - Passive launch only (`py tools\truthan_gui.py launch` + screencap, no taps):
   server/reverse came up; client TCP connected then `peer_eof` without login/
   map-entry; **no cmd132 captured**; `game_connected=false`. Not a client PASS.
+- peer_eof evidence (2026-09-25 packet logs): `20260925_002812_p*` all ports
+  CONNECTED→`peer_eof` with zero RX frames (client opens TCP then closes without
+  protocol bytes); `20260925_002855_p29000` stayed open → `server_idle_300s`.
+  Old screenshots `datas_spawn_passive*.png` are UTF-16-mangled (unreadable).
+
+### Full decode of APK `data/scn/9068.scn` (2026-09-25)
+
+- Layout VERIFIED against `GScene.init` / `initFromJar` + `GZIP.inflate`.
+- `map_gw=45`, `map_gh=60` (2700 cells), 9 tile image groups, 27 tile anims,
+  17 GDoodadObject (static decorations only), 1 transfer area, block counts
+  `{0:513,...,13:2100}`. Residual 299 B = `GSceneBackLayer` (not yet parsed).
+- Walkability via `canCross`+`HITMASK`: spawn (180,230), fixture (203,253) and
+  monster (196,238) all block 0 → walkable. **No NPC/mob spawn table in `.scn`**
+  — original spawn XY stays `UNKNOWN`.
+- Second fixture added: TEST OBJ1155 sprite 220011, `can_hit=1`, RECONSTRUCTED
+  label; assets IMG1207 VERIFIED in APK. Suite **23 OK**.
 
 ---
 

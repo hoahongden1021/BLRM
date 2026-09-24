@@ -276,6 +276,9 @@ BIND_HOST = os.environ.get("TRUTHAN_BIND", "127.0.0.1")
 
 # Evidence-backed diagnostic fixtures only. First entry is the narrow
 # VERIFIED run112928 probe (TEST OBJ1014); never rename to a tutorial NPC.
+# Second entry is a hittable TEST monster (RECONSTRUCTED position/identity):
+# OBJ/IMG assets exist in the APK and cmd132 canHit field layout is VERIFIED,
+# but the object is NOT proven to be an original game spawn or a named monster.
 # Fields match npc_view_body(); "label" is documentation-only and not sent.
 DATA_SPAWN_FIXTURES = (
     {
@@ -292,6 +295,33 @@ DATA_SPAWN_FIXTURES = (
         "max_mp": 100,
         "can_select": 1,
         "can_hit": 0,
+        "speed": 40,
+        "auto_control_type": 0,
+        "initial_state": 0,
+        "action_type": 0,
+        "action_id": 0,
+        "direction": 0,
+        "appearance_effect_gate": 1,
+        "flags": bytes([3]),
+    },
+    {
+        # RECONSTRUCTED hittable TEST monster — NOT an original game spawn.
+        # OBJ 1155 / IMG 1207 exist in the bundled APK (VERIFIED asset chain).
+        # cmd132 canHit field position is VERIFIED; identity vs 火狐妖 is UNKNOWN.
+        # Position (196,238) is walkable under GScene.canCross for scene 9068.
+        "label": "TEST_MONSTER_RECONSTRUCTED",
+        "sprite_id": 220011,
+        "name": "TEST OBJ1155",
+        "level": 1,
+        "object_data_id": 1155,
+        "x": 196,
+        "y": 238,
+        "hp": 60,
+        "max_hp": 60,
+        "mp": 20,
+        "max_mp": 20,
+        "can_select": 1,
+        "can_hit": 1,
         "speed": 40,
         "auto_control_type": 0,
         "initial_state": 0,
@@ -434,7 +464,11 @@ def send(c, f, port, cmd, body=b"", sid=0, sess=0, label=""):
     c.sendall(d)
     log_block(f, "TX-FRAME", d, port, cmd, "SERVER-NORMAL")
     if label:
-        print(label)
+        # Scene names are Chinese; console may be cp1252 — never abort the send path.
+        try:
+            print(label)
+        except UnicodeEncodeError:
+            print(label.encode("utf-8", "replace").decode("ascii", "replace"))
 
 # ----------------------------------------------------------------------
 # AUTH SERVER 29000

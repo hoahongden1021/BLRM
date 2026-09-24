@@ -26,11 +26,40 @@ This file records only protocol conclusions that are supported by current eviden
 
 Status: `VERIFIED`
 
+**cmd42 / cmd-42 layout (2026-09-25, packet log `20260925_005625_p29000`):**
+
+- Client RX `cmd=42` body contains userId string, account `admin123`, password
+  hash fields, and `null` placeholder strings — matches
+  `T4game.processLoginMessage` (b==1 success branch).
+- Server TX `cmd=-42` (`0xFFD6`) `auth_body`:
+  success byte 1 + phoneBound 0 + userId `10001` (i32) + serverCount 1 (i32)
+  + per-server: id 1 (i32), name `Local Test`, addr `127.0.0.1:19000`,
+  status 0 (i8), roleCount 0 (i8), empty string3.
+- After TX, client `peer_eof` on 29000 (normal — auth socket closed after
+  `processServerList` → `Authenticate.ReturnBack` → MainMenu view -5).
+
+**Post-auth blocker (2026-09-25, UNKNOWN cause):**
+
+- Client opens 19000 (`20260925_005839_p19000`) then **immediately peer_eof
+  with zero frames** — never sent cmd277 FE-PREAUTH.
+- UI shows NETWORK_ERROR `网络故障，请重新登录` / `网络错误，请重新登录`
+  + `确定` + `读取中...N%` progress; loading climbs to 100% then **stays
+  stuck** (dialog does not dismiss on tap).
+- `GameScreen.tick` sets State 100 when `TcpNetwork.tcpState` not
+  `TCP_OPEN`/`TCP_NORMAL_STATE`; `MainMenu` case -4 with `isHttp` shows the
+  same text. Candidates: post-open failure in `TcpNetwork(StartGame,str)` /
+  `open()`, `isHttp` path, server-list parse exception, or shared static
+  `tcpState` errored when auth socket closed.
+- Cause remains **UNKNOWN** — no cmd277 on the real Android client this
+  session. Python integration-test 19000 flows (cmd277→20→6→7→32→10→132)
+  are **not** the Android client.
+
 ### Game
 
 - TCP port: `19000`
 
-Status: `VERIFIED`
+Status: `VERIFIED` (port + Python integration-test flow; Android client
+never completed 19000 handshake this session — see post-auth blocker above)
 
 ---
 

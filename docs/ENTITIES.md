@@ -35,6 +35,21 @@ comes from cmd132 → `scene.addSprite`. Omitting cmd9 does **not** explain
 missing map sprites. Data-driven spawn gate: `TRUTHAN_DATA_SPAWN` (default OFF),
 first fixture TEST OBJ1014. Status `PARTIAL` until a real-client sequence.
 
+## 2026-09-25: RECONSTRUCTED hittable TEST monster (OBJ1155)
+
+- Second `DATA_SPAWN_FIXTURES` entry when `TRUTHAN_DATA_SPAWN=1`:
+  sprite `220011`, name `TEST OBJ1155`, objectDataId `1155`, scene 9068,
+  position `(196,238)`, `can_select=1`, `can_hit=1`, HP/MP 60/60/20/20,
+  label `TEST_MONSTER_RECONSTRUCTED`.
+- Assets VERIFIED: OBJ1155 → IMG1207 present in bundled APK; cmd132 GNPC
+  field layout VERIFIED (baseline + integration tests).
+- Position VERIFIED walkable via decoded `GScene.canCross` for 9068
+  (block 0 at 196,238); not claimed as an original spawn XY.
+- Identity vs tutorial 火狐妖 remains `UNKNOWN`. Never rename this fixture
+  to an original NPC/monster name.
+- Integration test asserts both sprites and `can_hit==1` on the monster body.
+  Full suite: **23 OK**.
+
 ## Character classes / skills (2026-09-24)
 
 - Occupations (original): 力士(0), 刺客(1), 唤雷师(2), 天师(3), 武神(4), 圣仙(5);
