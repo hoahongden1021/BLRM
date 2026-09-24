@@ -9,6 +9,14 @@ Android quests/skills/goods are packet-driven (`getFunctioRoleQuest`,
 `readRoleSkill`, `readGoods`). Catalog: `docs/research/PC_SKILLS_EQUIPMENT_QUESTS.md`.
 No server code changed. No quest IDs guessed.
 
+Research (2026-09-24, follow-up): skill families 171–175 have **no static
+class→family map** in PC conf or original DEX — ownership remains UNKNOWN.
+Occupations 力士/刺客/唤雷师/天师 (+武神/圣仙 via NewJob) and weapon types
+刀剑斧法剑羽扇法杖 are VERIFIED constants; skill weapon/job gates and MP/CD/level
+are **packet fields** (`RoleQuickUse` / `processSkillDetail`), not conf columns.
+See `docs/research/SKILL_CLASS_WEAPON_MAP.md` + `skill_family_catalog.csv`.
+No server code changed. No class inferred from ID prefix or skill name.
+
 Latest milestone (2026-09-22, clean run 112928): one diagnostic GNPC now renders
 and can be selected in the real Android client. VERIFIED only for this minimal
 cmd132 path: TEST OBJ1014, synthetic runtime ID220010, APK object1014/image7197,

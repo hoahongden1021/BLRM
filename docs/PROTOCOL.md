@@ -341,6 +341,22 @@ String.valueOf/Object.equals, array allocation, and collection methods have no
 packet reads. Resource loading and later rendering/update paths are separate
 from this packet cursor; this is not a claim that all game/render code was audited.
 
+### Skill / job / weapon related client commands (JADX constants, server side not matched)
+
+| Constant | Value | Reader | Status |
+|---:|---:|---|---|
+| ROLE_SKILL_MESSAGE | 27 | `processRoleSkillMessage` → genius tree + `readRoleSkill` loop | VERIFIED (client read) |
+| GENIUS_ADDPOINT_MESSAGE | 128 | `processMagicGeniusChangeMessage` | VERIFIED (client read) |
+| ROLE_SKILL_DETAILS_MESSAGE | 129 | `processMagicGeniusDetailMessage` → `processSkillDetail` | VERIFIED (client read) |
+| GET_GENIUS_TREE_MESSAGE | 287 | `processServive_GET_GENIUS_TREE_Message` / send puts short tree id | VERIFIED (client) |
+| COMM_SKILL_DTEAIL_MESSAGE | 312 | `processCommSkillDetailMessage` (weapon byte list + MP/CD) | VERIFIED (client read) |
+| SKILL_RESTRICT | 316 | `processLimitSkillMessage` = sprite special state only | VERIFIED (not a skill job table) |
+| ROLE_SKILL_CHANGE_MESSAGE | 340 | UI/split helper usage | PARTIAL |
+
+Skill cast gates on original client: `RoleQuickUse.testWuQiXianZhi` /
+`testJobXianZhi` with lists filled from quick-slot packets — see
+`docs/research/SKILL_CLASS_WEAPON_MAP.md`.
+
 ### Probe boundary and comparison with current encoder (no changes made)
 
 - The static schema is sufficient to design a single, fresh GNPC asset probe.

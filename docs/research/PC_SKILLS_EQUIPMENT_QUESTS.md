@@ -217,7 +217,15 @@ Combat balance remains server-side / packet-side for all three until proven othe
 
 ---
 
-## 6. Working artifacts (temp, not committed)
+## 6. Follow-up catalog (same day)
+
+Class/skill-family/weapon provenance and numeric source tracing:
+`docs/research/SKILL_CLASS_WEAPON_MAP.md` and
+`docs/research/skill_family_catalog.csv`.
+
+---
+
+## 7. Working artifacts (temp, not committed)
 
 - `C:\Users\Mech\AppData\Local\Temp\opencode\DumpGameplay.java` / `_out.txt`
 - `...\DumpGameplay2.java` / `_out.txt` (equipment/mount/skill/lang dumps)

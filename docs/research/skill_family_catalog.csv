@@ -1,0 +1,385 @@
+id,family,name_vn,name_e,desc1_vn,desc1_e,desc3_e,needWeapon_vn,rank_group_size,rank_group_min,rank_group_max
+17101,171,"Đoạt Phách Trảm","Soul Reaver Slash","Đơn thể","Single Target","Use","",6,17101,17106
+17102,171,"Đoạt Phách Trảm","Soul Reaver Slash","Đơn thể","Single Target","","",6,17101,17106
+17103,171,"Đoạt Phách Trảm","Soul Reaver Slash","Đơn thể","Single Target","","",6,17101,17106
+17104,171,"Đoạt Phách Trảm","Soul Reaver Slash","Đơn thể","Single Target","","",6,17101,17106
+17105,171,"Đoạt Phách Trảm","Soul Reaver Slash","Đơn thể","Single Target","","",6,17101,17106
+17106,171,"Đoạt Phách Trảm","Soul Reaver Slash","Đơn thể","Single Target","","",6,17101,17106
+17107,171,"Phệ Hồn Phong Ma Trảm","Soul Devouring Demon-Sealing Slash","Đơn thể","Single Target","","",2,17107,17108
+17108,171,"Phệ Hồn Phong Ma Trảm","Soul Devouring Demon-Sealing Slash","Đơn thể","Single Target","","",2,17107,17108
+17120,171,"Tịch Diệt Trảm","Oblivion Slash","Đơn thể","Single Target","","",6,17120,17125
+17121,171,"Tịch Diệt Trảm","Oblivion Slash","Đơn thể","Single Target","","",6,17120,17125
+17122,171,"Tịch Diệt Trảm","Oblivion Slash","Đơn thể","Single Target","","",6,17120,17125
+17123,171,"Tịch Diệt Trảm","Oblivion Slash","Đơn thể","Single Target","","",6,17120,17125
+17124,171,"Tịch Diệt Trảm","Oblivion Slash","Đơn thể","Single Target","","",6,17120,17125
+17125,171,"Tịch Diệt Trảm","Oblivion Slash","Đơn thể","Single Target","","",6,17120,17125
+17126,171,"Quỷ Thần Cung","Demon God’s Might","Bị Động","Passive","","",6,17126,17131
+17127,171,"Quỷ Thần Cung","Demon God’s Might","Bị Động","Passive","","",6,17126,17131
+17128,171,"Quỷ Thần Cung","Demon God’s Might","Bị Động","Passive","","",6,17126,17131
+17129,171,"Quỷ Thần Cung","Demon God’s Might","Bị Động","Passive","","",6,17126,17131
+17130,171,"Quỷ Thần Cung","Demon God’s Might","Bị Động","Passive","","",6,17126,17131
+17131,171,"Quỷ Thần Cung","Demon God’s Might","Bị Động","Passive","","",6,17126,17131
+17139,171,"Đoạn Hồn Trảm","Soul Severing Slash","Đơn thể","Single Target","","",6,17139,17144
+17140,171,"Đoạn Hồn Trảm","Soul Severing Slash","Đơn thể","Single Target","","",6,17139,17144
+17141,171,"Đoạn Hồn Trảm","Soul Severing Slash","Đơn thể","Single Target","","",6,17139,17144
+17142,171,"Đoạn Hồn Trảm","Soul Severing Slash","Đơn thể","Single Target","","",6,17139,17144
+17143,171,"Đoạn Hồn Trảm","Soul Severing Slash","Đơn thể","Single Target","","",6,17139,17144
+17144,171,"Đoạn Hồn Trảm","Soul Severing Slash","Đơn thể","Single Target","","",6,17139,17144
+17145,171,"Bàn Cổ Truyền Nhân","Heir of Pangu","Bị Động","Passive","","",6,17145,17150
+17146,171,"Bàn Cổ Truyền Nhân","Heir of Pangu","Bị Động","Passive","","",6,17145,17150
+17147,171,"Bàn Cổ Truyền Nhân","Heir of Pangu","Bị Động","Passive","","",6,17145,17150
+17148,171,"Bàn Cổ Truyền Nhân","Heir of Pangu","Bị Động","Passive","","",6,17145,17150
+17149,171,"Bàn Cổ Truyền Nhân","Heir of Pangu","Bị Động","Passive","","",6,17145,17150
+17150,171,"Bàn Cổ Truyền Nhân","Heir of Pangu","Bị Động","Passive","","",6,17145,17150
+17151,171,"Bá Vương Cung","Tyrant’s Roar","Quần thể","Area Target","","",2,17151,17152
+17152,171,"Bá Vương Cung","Tyrant’s Roar","Quần thể","Area Target","","",2,17151,17152
+17153,171,"Hỗn Nguyên Hộ Thể","Primordial Body Guard","Đơn thể","Single Target","","",6,17153,17158
+17154,171,"Hỗn Nguyên Hộ Thể","Primordial Body Guard","Đơn thể","Single Target","","",6,17153,17158
+17155,171,"Hỗn Nguyên Hộ Thể","Primordial Body Guard","Đơn thể","Single Target","","",6,17153,17158
+17156,171,"Hỗn Nguyên Hộ Thể","Primordial Body Guard","Đơn thể","Single Target","","",6,17153,17158
+17157,171,"Hỗn Nguyên Hộ Thể","Primordial Body Guard","Đơn thể","Single Target","","",6,17153,17158
+17158,171,"Hỗn Nguyên Hộ Thể","Primordial Body Guard","Đơn thể","Single Target","","",6,17153,17158
+17159,171,"Cuồng Bạo","Berserk","Bị Động","Passive","","",6,17159,17164
+17160,171,"Cuồng Bạo","Berserk","Bị Động","Passive","","",6,17159,17164
+17161,171,"Cuồng Bạo","Berserk","Bị Động","Passive","","",6,17159,17164
+17162,171,"Cuồng Bạo","Berserk","Bị Động","Passive","","",6,17159,17164
+17163,171,"Cuồng Bạo","Berserk","Bị Động","Passive","","",6,17159,17164
+17164,171,"Cuồng Bạo","Berserk","Bị Động","Passive","","",6,17159,17164
+17165,171,"Hoành Tảo Thiên Quân","Sweeping Thousand Armies","Đơn thể","Single Target","","",6,17165,17170
+17166,171,"Hoành Tảo Thiên Quân","Sweeping Thousand Armies","Đơn thể","Single Target","","",6,17165,17170
+17167,171,"Hoành Tảo Thiên Quân","Sweeping Thousand Armies","Đơn thể","Single Target","","",6,17165,17170
+17168,171,"Hoành Tảo Thiên Quân","Sweeping Thousand Armies","Đơn thể","Single Target","","",6,17165,17170
+17169,171,"Hoành Tảo Thiên Quân","Sweeping Thousand Armies","Đơn thể","Single Target","","",6,17165,17170
+17170,171,"Hoành Tảo Thiên Quân","Sweeping Thousand Armies","Đơn thể","Single Target","","",6,17165,17170
+17171,171,"Huyết Tế","Blood Sacrifice","Đơn thể","Single Target","","",6,17171,17176
+17172,171,"Huyết Tế","Blood Sacrifice","Đơn thể","Single Target","","",6,17171,17176
+17173,171,"Huyết Tế","Blood Sacrifice","Đơn thể","Single Target","","",6,17171,17176
+17174,171,"Huyết Tế","Blood Sacrifice","Đơn thể","Single Target","","",6,17171,17176
+17175,171,"Huyết Tế","Blood Sacrifice","Đơn thể","Single Target","","",6,17171,17176
+17176,171,"Huyết Tế","Blood Sacrifice","Đơn thể","Single Target","","",6,17171,17176
+17178,171,"Khai Thiên Mục","Heaven Opening Eye","Bị Động","Passive","","",6,17178,17183
+17179,171,"Khai Thiên Mục","Heaven Opening Eye","Bị Động","Passive","","",6,17178,17183
+17180,171,"Khai Thiên Mục","Heaven Opening Eye","Bị Động","Passive","","",6,17178,17183
+17181,171,"Khai Thiên Mục","Heaven Opening Eye","Bị Động","Passive","","",6,17178,17183
+17182,171,"Khai Thiên Mục","Heaven Opening Eye","Bị Động","Passive","","",6,17178,17183
+17183,171,"Khai Thiên Mục","Heaven Opening Eye","Bị Động","Passive","","",6,17178,17183
+17184,171,"Tu La Trảm","Asura Slash","Đơn thể","Single Target","","",6,17184,17189
+17185,171,"Tu La Trảm","Asura Slash","Đơn thể","Single Target","","",6,17184,17189
+17186,171,"Tu La Trảm","Asura Slash","Đơn thể","Single Target","","",6,17184,17189
+17187,171,"Tu La Trảm","Asura Slash","Đơn thể","Single Target","","",6,17184,17189
+17188,171,"Tu La Trảm","Asura Slash","Đơn thể","Single Target","","",6,17184,17189
+17189,171,"Tu La Trảm","Asura Slash","Đơn thể","Single Target","","",6,17184,17189
+17190,171,"Cường Thể Thuật","Body Strengthening Art","Bị Động","Passive","","",6,17190,17195
+17191,171,"Cường Thể Thuật","Body Strengthening Art","Bị Động","Passive","","",6,17190,17195
+17192,171,"Cường Thể Thuật","Body Strengthening Art","Bị Động","Passive","","",6,17190,17195
+17193,171,"Cường Thể Thuật","Body Strengthening Art","Bị Động","Passive","","",6,17190,17195
+17194,171,"Cường Thể Thuật","Body Strengthening Art","Bị Động","Passive","","",6,17190,17195
+17195,171,"Cường Thể Thuật","Body Strengthening Art","Bị Động","Passive","","",6,17190,17195
+17196,171,"Hiên Viên Truyền Nhân","Heir of Xuanyuan","Bị Động","Passive","","",6,17196,17201
+17197,171,"Hiên Viên Truyền Nhân","Heir of Xuanyuan","Bị Động","Passive","","",6,17196,17201
+17198,171,"Hiên Viên Truyền Nhân","Heir of Xuanyuan","Bị Động","Passive","","",6,17196,17201
+17199,171,"Hiên Viên Truyền Nhân","Heir of Xuanyuan","Bị Động","Passive","","",6,17196,17201
+17200,172,"Hiên Viên Truyền Nhân","Heir of Xuanyuan","Bị Động","Passive","","",6,17196,17201
+17201,172,"Hiên Viên Truyền Nhân","Heir of Xuanyuan","Bị Động","Passive","","",6,17196,17201
+17202,172,"Kiếm Kích Trường Không","Sky Piercing Sword Strike","Đơn thể","Single Target","","",6,17202,17207
+17203,172,"Kiếm Kích Trường Không","Sky Piercing Sword Strike","Đơn thể","Single Target","","",6,17202,17207
+17204,172,"Kiếm Kích Trường Không","Sky Piercing Sword Strike","Đơn thể","Single Target","","",6,17202,17207
+17205,172,"Kiếm Kích Trường Không","Sky Piercing Sword Strike","Đơn thể","Single Target","","",6,17202,17207
+17206,172,"Kiếm Kích Trường Không","Sky Piercing Sword Strike","Đơn thể","Single Target","","",6,17202,17207
+17207,172,"Kiếm Kích Trường Không","Sky Piercing Sword Strike","Đơn thể","Single Target","","",6,17202,17207
+17208,172,"Ngưng Thần Quyết","Spirit Focus Art","Bị Động","Passive","","",6,17208,17213
+17209,172,"Ngưng Thần Quyết","Spirit Focus Art","Bị Động","Passive","","",6,17208,17213
+17210,172,"Ngưng Thần Quyết","Spirit Focus Art","Bị Động","Passive","","",6,17208,17213
+17211,172,"Ngưng Thần Quyết","Spirit Focus Art","Bị Động","Passive","","",6,17208,17213
+17212,172,"Ngưng Thần Quyết","Spirit Focus Art","Bị Động","Passive","","",6,17208,17213
+17213,172,"Ngưng Thần Quyết","Spirit Focus Art","Bị Động","Passive","","",6,17208,17213
+17214,172,"Khí Huyết Dồi Dào","Vigorous Vitality","Bị Động","Passive","","",6,17214,17219
+17215,172,"Khí Huyết Dồi Dào","Vigorous Vitality","Bị Động","Passive","","",6,17214,17219
+17216,172,"Khí Huyết Dồi Dào","Vigorous Vitality","Bị Động","Passive","","",6,17214,17219
+17217,172,"Khí Huyết Dồi Dào","Vigorous Vitality","Bị Động","Passive","","",6,17214,17219
+17218,172,"Khí Huyết Dồi Dào","Vigorous Vitality","Bị Động","Passive","","",6,17214,17219
+17219,172,"Khí Huyết Dồi Dào","Vigorous Vitality","Bị Động","Passive","","",6,17214,17219
+17220,172,"Vạn Kiếm Xuyên Tâm","Ten Thousand Swords Piercing Heart","Đơn thể","Single Target","","",2,17220,17221
+17221,172,"Vạn Kiếm Xuyên Tâm","Ten Thousand Swords Piercing Heart","Quần thể","Area Target","","",2,17220,17221
+17301,173,"Thứ Cốt","Bone Piercer","Đơn thể","Single Target","","",6,17301,17306
+17302,173,"Thứ Cốt","Bone Piercer","Đơn thể","Single Target","","",6,17301,17306
+17303,173,"Thứ Cốt","Bone Piercer","Đơn thể","Single Target","","",6,17301,17306
+17304,173,"Thứ Cốt","Bone Piercer","Đơn thể","Single Target","","",6,17301,17306
+17305,173,"Thứ Cốt","Bone Piercer","Đơn thể","Single Target","","",6,17301,17306
+17306,173,"Thứ Cốt","Bone Piercer","Đơn thể","Single Target","","",6,17301,17306
+17307,173,"Lãnh Nguyệt Trảm","Cold Moon Slash","Đơn thể","Single Target","","",6,17307,17312
+17308,173,"Lãnh Nguyệt Trảm","Cold Moon Slash","Đơn thể","Single Target","","",6,17307,17312
+17309,173,"Lãnh Nguyệt Trảm","Cold Moon Slash","Đơn thể","Single Target","","",6,17307,17312
+17310,173,"Lãnh Nguyệt Trảm","Cold Moon Slash","Đơn thể","Single Target","","",6,17307,17312
+17311,173,"Lãnh Nguyệt Trảm","Cold Moon Slash","Đơn thể","Single Target","","",6,17307,17312
+17312,173,"Lãnh Nguyệt Trảm","Cold Moon Slash","Đơn thể","Single Target","","",6,17307,17312
+17313,173,"Lãnh Huyết","Cold Blood","Bị Động","Passive","","",6,17313,17318
+17314,173,"Lãnh Huyết","Cold Blood","Bị Động","Passive","","",6,17313,17318
+17315,173,"Lãnh Huyết","Cold Blood","Bị Động","Passive","","",6,17313,17318
+17316,173,"Lãnh Huyết","Cold Blood","Bị Động","Passive","","",6,17313,17318
+17317,173,"Lãnh Huyết","Cold Blood","Bị Động","Passive","","",6,17313,17318
+17318,173,"Lãnh Huyết","Cold Blood","Bị Động","Passive","","",6,17313,17318
+17319,173,"Lãnh Đao Khách","Cold Blade Warrior","Bị Động","Passive","","",6,17319,17324
+17320,173,"Lãnh Đao Khách","Cold Blade Warrior","Bị Động","Passive","","",6,17319,17324
+17321,173,"Lãnh Đao Khách","Cold Blade Warrior","Bị Động","Passive","","",6,17319,17324
+17322,173,"Lãnh Đao Khách","Cold Blade Warrior","Bị Động","Passive","","",6,17319,17324
+17323,173,"Lãnh Đao Khách","Cold Blade Warrior","Bị Động","Passive","","",6,17319,17324
+17324,173,"Lãnh Đao Khách","Cold Blade Warrior","Bị Động","Passive","","",6,17319,17324
+17327,173,"Đoạn Cảnh Trảm","Realm Severing Slash","Đơn thể","Single Target","","",6,17327,17332
+17328,173,"Đoạn Cảnh Trảm","Realm Severing Slash","Đơn thể","Single Target","","",6,17327,17332
+17329,173,"Đoạn Cảnh Trảm","Realm Severing Slash","Đơn thể","Single Target","","",6,17327,17332
+17330,173,"Đoạn Cảnh Trảm","Realm Severing Slash","Đơn thể","Single Target","","",6,17327,17332
+17331,173,"Đoạn Cảnh Trảm","Realm Severing Slash","Đơn thể","Single Target","","",6,17327,17332
+17332,173,"Đoạn Cảnh Trảm","Realm Severing Slash","Đơn thể","Single Target","","",6,17327,17332
+17333,173,"Sát Ý","Killing Intent","Bị Động","Passive","","",6,17333,17338
+17334,173,"Sát Ý","Killing Intent","Bị Động","Passive","","",6,17333,17338
+17335,173,"Sát Ý","Killing Intent","Bị Động","Passive","","",6,17333,17338
+17336,173,"Sát Ý","Killing Intent","Bị Động","Passive","","",6,17333,17338
+17337,173,"Sát Ý","Killing Intent","Bị Động","Passive","","",6,17333,17338
+17338,173,"Sát Ý","Killing Intent","Bị Động","Passive","","",6,17333,17338
+17339,173,"Huyết Tế Thị Hồn","Blood Sacrifice Soul Devour","Bản thân","Self","","",2,17339,17340
+17340,173,"Huyết Tế Thị Hồn","Blood Sacrifice Soul Devour","Bản thân","Self","","",2,17339,17340
+17341,173,"Tôi Độc","Poison Infusion","Bị Động","Passive","","",6,17341,17346
+17342,173,"Tôi Độc","Poison Infusion","Bị Động","Passive","","",6,17341,17346
+17343,173,"Tôi Độc","Poison Infusion","Bị Động","Passive","","",6,17341,17346
+17344,173,"Tôi Độc","Poison Infusion","Bị Động","Passive","","",6,17341,17346
+17345,173,"Tôi Độc","Poison Infusion","Bị Động","Passive","","",6,17341,17346
+17346,173,"Tôi Độc","Poison Infusion","Bị Động","Passive","","",6,17341,17346
+17347,173,"Ảnh Nguyệt Liệt Ảnh","Shadow Moon Split Shadow","Đơn thể","Single Target","","",6,17347,17352
+17348,173,"Ảnh Nguyệt Liệt Ảnh","Shadow Moon Split Shadow","Đơn thể","Single Target","","",6,17347,17352
+17349,173,"Ảnh Nguyệt Liệt Ảnh","Shadow Moon Split Shadow","Đơn thể","Single Target","","",6,17347,17352
+17350,173,"Ảnh Nguyệt Liệt Ảnh","Shadow Moon Split Shadow","Đơn thể","Single Target","","",6,17347,17352
+17351,173,"Ảnh Nguyệt Liệt Ảnh","Shadow Moon Split Shadow","Đơn thể","Single Target","","",6,17347,17352
+17352,173,"Ảnh Nguyệt Liệt Ảnh","Shadow Moon Split Shadow","Đơn thể","Single Target","","",6,17347,17352
+17353,173,"Vạn Độc Thực Tượng","Myriad Poison Devour","Quần thể","Area Target","","",6,17353,17358
+17354,173,"Vạn Độc Thực Tượng","Myriad Poison Devour","Quần thể","Area Target","","",6,17353,17358
+17355,173,"Vạn Độc Thực Tượng","Myriad Poison Devour","Quần thể","Area Target","","",6,17353,17358
+17356,173,"Vạn Độc Thực Tượng","Myriad Poison Devour","Quần thể","Area Target","","",6,17353,17358
+17357,173,"Vạn Độc Thực Tượng","Myriad Poison Devour","Quần thể","Area Target","","",6,17353,17358
+17358,173,"Vạn Độc Thực Tượng","Myriad Poison Devour","Quần thể","Area Target","","",6,17353,17358
+17359,173,"Vô Ảnh Thứ","Shadowless Strike","Đơn thể","Single Target","","",6,17359,17364
+17360,173,"Vô Ảnh Thứ","Shadowless Strike","Đơn thể","Single Target","","",6,17359,17364
+17361,173,"Vô Ảnh Thứ","Shadowless Strike","Đơn thể","Single Target","","",6,17359,17364
+17362,173,"Vô Ảnh Thứ","Shadowless Strike","Đơn thể","Single Target","","",6,17359,17364
+17363,173,"Vô Ảnh Thứ","Shadowless Strike","Đơn thể","Single Target","","",6,17359,17364
+17364,173,"Vô Ảnh Thứ","Shadowless Strike","Đơn thể","Single Target","","",6,17359,17364
+17365,173,"Thực Cốt Hủ Độc","Bone Corroding Poison","Đơn thể","Single Target","","",6,17365,17370
+17366,173,"Thực Cốt Hủ Độc","Bone Corroding Poison","Đơn thể","Single Target","","",6,17365,17370
+17367,173,"Thực Cốt Hủ Độc","Bone Corroding Poison","Đơn thể","Single Target","","",6,17365,17370
+17368,173,"Thực Cốt Hủ Độc","Bone Corroding Poison","Đơn thể","Single Target","","",6,17365,17370
+17369,173,"Thực Cốt Hủ Độc","Bone Corroding Poison","Đơn thể","Single Target","","",6,17365,17370
+17370,173,"Thực Cốt Hủ Độc","Bone Corroding Poison","Đơn thể","Single Target","","",6,17365,17370
+17371,173,"Kiếm Vũ Giả","Sword Dancer","Bị Động","Passive","","",6,17371,17376
+17372,173,"Kiếm Vũ Giả","Sword Dancer","Bị Động","Passive","","",6,17371,17376
+17373,173,"Kiếm Vũ Giả","Sword Dancer","Bị Động","Passive","","",6,17371,17376
+17374,173,"Kiếm Vũ Giả","Sword Dancer","Bị Động","Passive","","",6,17371,17376
+17375,173,"Kiếm Vũ Giả","Sword Dancer","Bị Động","Passive","","",6,17371,17376
+17376,173,"Kiếm Vũ Giả","Sword Dancer","Bị Động","Passive","","",6,17371,17376
+17377,173,"Ngưng Nhi Bất Tán","Unbroken Concentration","Bị Động","Passive","","",6,17377,17382
+17378,173,"Ngưng Nhi Bất Tán","Unbroken Concentration","Bị Động","Passive","","",6,17377,17382
+17379,173,"Ngưng Nhi Bất Tán","Unbroken Concentration","Bị Động","Passive","","",6,17377,17382
+17380,173,"Ngưng Nhi Bất Tán","Unbroken Concentration","Bị Động","Passive","","",6,17377,17382
+17381,173,"Ngưng Nhi Bất Tán","Unbroken Concentration","Bị Động","Passive","","",6,17377,17382
+17382,173,"Ngưng Nhi Bất Tán","Unbroken Concentration","Bị Động","Passive","","",6,17377,17382
+17383,173,"Hủ Độc Chi Ba","Wave of Corrupt Poison","Quần thể","Area Target","","",6,17383,17388
+17384,173,"Hủ Độc Chi Ba","Wave of Corrupt Poison","Quần thể","Area Target","","",6,17383,17388
+17385,173,"Hủ Độc Chi Ba","Wave of Corrupt Poison","Quần thể","Area Target","","",6,17383,17388
+17386,173,"Hủ Độc Chi Ba","Wave of Corrupt Poison","Quần thể","Area Target","","",6,17383,17388
+17387,173,"Hủ Độc Chi Ba","Wave of Corrupt Poison","Quần thể","Area Target","","",6,17383,17388
+17388,173,"Hủ Độc Chi Ba","Wave of Corrupt Poison","Quần thể","Area Target","","",6,17383,17388
+17389,173,"Kiếm Huyết Phong Hầu","Bloodseal Throat Strike","Bị Động","Passive","","",6,17389,17394
+17390,173,"Kiếm Huyết Phong Hầu","Bloodseal Throat Strike","Bị Động","Passive","","",6,17389,17394
+17391,173,"Kiếm Huyết Phong Hầu","Bloodseal Throat Strike","Bị Động","Passive","","",6,17389,17394
+17392,173,"Kiếm Huyết Phong Hầu","Bloodseal Throat Strike","Bị Động","Passive","","",6,17389,17394
+17393,173,"Kiếm Huyết Phong Hầu","Bloodseal Throat Strike","Bị Động","Passive","","",6,17389,17394
+17394,173,"Kiếm Huyết Phong Hầu","Bloodseal Throat Strike","Bị Động","Passive","","",6,17389,17394
+17395,173,"Bạo Vũ Lê Hoa","Pear Blossom Storm","Quần thể","Area Target","","",2,17395,17396
+17396,173,"Bạo Vũ Lê Hoa","Pear Blossom Storm","Quần thể","Area Target","","",2,17395,17396
+17397,173,"Phi Kiếm","Flying Sword","Đơn thể","Single Target","","",6,17397,17402
+17398,173,"Phi Kiếm","Flying Sword","Đơn thể","Single Target","","",6,17397,17402
+17399,173,"Phi Kiếm","Flying Sword","Đơn thể","Single Target","","",6,17397,17402
+17400,174,"Phi Kiếm","Flying Sword","Đơn thể","Single Target","","",6,17397,17402
+17401,174,"Phi Kiếm","Flying Sword","Đơn thể","Single Target","","",6,17397,17402
+17402,174,"Phi Kiếm","Flying Sword","Đơn thể","Single Target","","",6,17397,17402
+17403,174,"Ngự Kiếm Thuật","Sword Control Art","Bị Động","Passive","","",6,17403,17408
+17404,174,"Ngự Kiếm Thuật","Sword Control Art","Bị Động","Passive","","",6,17403,17408
+17405,174,"Ngự Kiếm Thuật","Sword Control Art","Bị Động","Passive","","",6,17403,17408
+17406,174,"Ngự Kiếm Thuật","Sword Control Art","Bị Động","Passive","","",6,17403,17408
+17407,174,"Ngự Kiếm Thuật","Sword Control Art","Bị Động","Passive","","",6,17403,17408
+17408,174,"Ngự Kiếm Thuật","Sword Control Art","Bị Động","Passive","","",6,17403,17408
+17409,174,"Khí Liệu Thuật","Qi Healing Art","Đơn thể","Single Target","","",6,17409,17414
+17410,174,"Khí Liệu Thuật","Qi Healing Art","Đơn thể","Single Target","","",6,17409,17414
+17411,174,"Khí Liệu Thuật","Qi Healing Art","Đơn thể","Single Target","","",6,17409,17414
+17412,174,"Khí Liệu Thuật","Qi Healing Art","Đơn thể","Single Target","","",6,17409,17414
+17413,174,"Khí Liệu Thuật","Qi Healing Art","Đơn thể","Single Target","","",6,17409,17414
+17414,174,"Khí Liệu Thuật","Qi Healing Art","Đơn thể","Single Target","","",6,17409,17414
+17415,174,"Linh Phiến Dược Sư","Spirit Fan Apothecary","Bị Động","Passive","","",6,17415,17420
+17416,174,"Linh Phiến Dược Sư","Spirit Fan Apothecary","Bị Động","Passive","","",6,17415,17420
+17417,174,"Linh Phiến Dược Sư","Spirit Fan Apothecary","Bị Động","Passive","","",6,17415,17420
+17418,174,"Linh Phiến Dược Sư","Spirit Fan Apothecary","Bị Động","Passive","","",6,17415,17420
+17419,174,"Linh Phiến Dược Sư","Spirit Fan Apothecary","Bị Động","Passive","","",6,17415,17420
+17420,174,"Linh Phiến Dược Sư","Spirit Fan Apothecary","Bị Động","Passive","","",6,17415,17420
+17421,174,"Hư Ảnh Trận Pháp","Phantom Formation","Quần thể","Area Target","","",6,17421,17426
+17422,174,"Hư Ảnh Trận Pháp","Phantom Formation","Quần thể","Area Target","","",6,17421,17426
+17423,174,"Hư Ảnh Trận Pháp","Phantom Formation","Quần thể","Area Target","","",6,17421,17426
+17424,174,"Hư Ảnh Trận Pháp","Phantom Formation","Quần thể","Area Target","","",6,17421,17426
+17425,174,"Hư Ảnh Trận Pháp","Phantom Formation","Quần thể","Area Target","","",6,17421,17426
+17426,174,"Hư Ảnh Trận Pháp","Phantom Formation","Quần thể","Area Target","","",6,17421,17426
+17427,174,"Phù Văn Cấm Cố","Rune Imprisonment","Đơn thể","Single Target","","",6,17427,17432
+17428,174,"Phù Văn Cấm Cố","Rune Imprisonment","Đơn thể","Single Target","","",6,17427,17432
+17429,174,"Phù Văn Cấm Cố","Rune Imprisonment","Đơn thể","Single Target","","",6,17427,17432
+17430,174,"Phù Văn Cấm Cố","Rune Imprisonment","Đơn thể","Single Target","","",6,17427,17432
+17431,174,"Phù Văn Cấm Cố","Rune Imprisonment","Đơn thể","Single Target","","",6,17427,17432
+17432,174,"Phù Văn Cấm Cố","Rune Imprisonment","Đơn thể","Single Target","","",6,17427,17432
+17433,174,"Tiên Khí Gia Trì","Immortal Aura Blessing","Bị Động","Passive","","",6,17433,17438
+17434,174,"Tiên Khí Gia Trì","Immortal Aura Blessing","Bị Động","Passive","","",6,17433,17438
+17435,174,"Tiên Khí Gia Trì","Immortal Aura Blessing","Bị Động","Passive","","",6,17433,17438
+17436,174,"Tiên Khí Gia Trì","Immortal Aura Blessing","Bị Động","Passive","","",6,17433,17438
+17437,174,"Tiên Khí Gia Trì","Immortal Aura Blessing","Bị Động","Passive","","",6,17433,17438
+17438,174,"Tiên Khí Gia Trì","Immortal Aura Blessing","Bị Động","Passive","","",6,17433,17438
+17439,174,"Hộ Thân Phù Chú","Protective Talisman","Đồng đội","Ally","","",2,17439,17440
+17440,174,"Hộ Thân Phù Chú","Protective Talisman","Đồng đội","Ally","","",2,17439,17440
+17441,174,"Ngự Kiếm Phi Vũ","Sword Feather Barrage","Đơn thể","Single Target","","",6,17441,17446
+17442,174,"Ngự Kiếm Phi Vũ","Sword Feather Barrage","Đơn thể","Single Target","","",6,17441,17446
+17443,174,"Ngự Kiếm Phi Vũ","Sword Feather Barrage","Đơn thể","Single Target","","",6,17441,17446
+17444,174,"Ngự Kiếm Phi Vũ","Sword Feather Barrage","Đơn thể","Single Target","","",6,17441,17446
+17445,174,"Ngự Kiếm Phi Vũ","Sword Feather Barrage","Đơn thể","Single Target","","",6,17441,17446
+17446,174,"Ngự Kiếm Phi Vũ","Sword Feather Barrage","Đơn thể","Single Target","","",6,17441,17446
+17447,174,"Luyện Kiếm Thuật","Sword Refinement Art","Bị Động","Passive","","",6,17447,17452
+17448,174,"Luyện Kiếm Thuật","Sword Refinement Art","Bị Động","Passive","","",6,17447,17452
+17449,174,"Luyện Kiếm Thuật","Sword Refinement Art","Bị Động","Passive","","",6,17447,17452
+17450,174,"Luyện Kiếm Thuật","Sword Refinement Art","Bị Động","Passive","","",6,17447,17452
+17451,174,"Luyện Kiếm Thuật","Sword Refinement Art","Bị Động","Passive","","",6,17447,17452
+17452,174,"Luyện Kiếm Thuật","Sword Refinement Art","Bị Động","Passive","","",6,17447,17452
+17453,174,"Càn Nguyên Kiếm Thánh","Qianyuan Sword Saint","Bị Động","Passive","","",6,17453,17458
+17454,174,"Càn Nguyên Kiếm Thánh","Qianyuan Sword Saint","Bị Động","Passive","","",6,17453,17458
+17455,174,"Càn Nguyên Kiếm Thánh","Qianyuan Sword Saint","Bị Động","Passive","","",6,17453,17458
+17456,174,"Càn Nguyên Kiếm Thánh","Qianyuan Sword Saint","Bị Động","Passive","","",6,17453,17458
+17457,174,"Càn Nguyên Kiếm Thánh","Qianyuan Sword Saint","Bị Động","Passive","","",6,17453,17458
+17458,174,"Càn Nguyên Kiếm Thánh","Qianyuan Sword Saint","Bị Động","Passive","","",6,17453,17458
+17459,174,"Trảm Long Quyết","Dragon Slaying Art","Đơn thể","Single Target","","",6,17459,17464
+17460,174,"Trảm Long Quyết","Dragon Slaying Art","Đơn thể","Single Target","","",6,17459,17464
+17461,174,"Trảm Long Quyết","Dragon Slaying Art","Đơn thể","Single Target","","",6,17459,17464
+17462,174,"Trảm Long Quyết","Dragon Slaying Art","Đơn thể","Single Target","","",6,17459,17464
+17463,174,"Trảm Long Quyết","Dragon Slaying Art","Đơn thể","Single Target","","",6,17459,17464
+17464,174,"Trảm Long Quyết","Dragon Slaying Art","Đơn thể","Single Target","","",6,17459,17464
+17465,174,"Thiên Sư Nộ","Heavenly Master's Wrath","Bị Động","Passive","","",6,17465,17470
+17466,174,"Thiên Sư Nộ","Heavenly Master's Wrath","Bị Động","Passive","","",6,17465,17470
+17467,174,"Thiên Sư Nộ","Heavenly Master's Wrath","Bị Động","Passive","","",6,17465,17470
+17468,174,"Thiên Sư Nộ","Heavenly Master's Wrath","Bị Động","Passive","","",6,17465,17470
+17469,174,"Thiên Sư Nộ","Heavenly Master's Wrath","Bị Động","Passive","","",6,17465,17470
+17470,174,"Thiên Sư Nộ","Heavenly Master's Wrath","Bị Động","Passive","","",6,17465,17470
+17471,174,"Kiếm Long Giải Giáp","Sword Dragon Armor Break","Đơn thể","Single Target","","",2,17471,17472
+17472,174,"Kiếm Long Giải Giáp","Sword Dragon Armor Break","Đơn thể","Single Target","","",2,17471,17472
+17473,174,"Thiên Kiếm","Heavenly Sword","Đơn thể","Single Target","","",6,17473,17478
+17474,174,"Thiên Kiếm","Heavenly Sword","Đơn thể","Single Target","","",6,17473,17478
+17475,174,"Thiên Kiếm","Heavenly Sword","Đơn thể","Single Target","","",6,17473,17478
+17476,174,"Thiên Kiếm","Heavenly Sword","Đơn thể","Single Target","","",6,17473,17478
+17477,174,"Thiên Kiếm","Heavenly Sword","Đơn thể","Single Target","","",6,17473,17478
+17478,174,"Thiên Kiếm","Heavenly Sword","Đơn thể","Single Target","","",6,17473,17478
+17479,174,"Khí Kiếm Thuật","Qi Sword Art","Bị Động","Passive","","",6,17479,17484
+17480,174,"Khí Kiếm Thuật","Qi Sword Art","Bị Động","Passive","","",6,17479,17484
+17481,174,"Khí Kiếm Thuật","Qi Sword Art","Bị Động","Passive","","",6,17479,17484
+17482,174,"Khí Kiếm Thuật","Qi Sword Art","Bị Động","Passive","","",6,17479,17484
+17483,174,"Khí Kiếm Thuật","Qi Sword Art","Bị Động","Passive","","",6,17479,17484
+17484,174,"Khí Kiếm Thuật","Qi Sword Art","Bị Động","Passive","","",6,17479,17484
+17485,174,"Vạn Kiếm Quy Tông","Ten Thousand Swords Return","Quần thể","Area Target","","",6,17485,17490
+17486,174,"Vạn Kiếm Quy Tông","Ten Thousand Swords Return","Quần thể","Area Target","","",6,17485,17490
+17487,174,"Vạn Kiếm Quy Tông","Ten Thousand Swords Return","Quần thể","Area Target","","",6,17485,17490
+17488,174,"Vạn Kiếm Quy Tông","Ten Thousand Swords Return","Quần thể","Area Target","","",6,17485,17490
+17489,174,"Vạn Kiếm Quy Tông","Ten Thousand Swords Return","Quần thể","Area Target","","",6,17485,17490
+17490,174,"Vạn Kiếm Quy Tông","Ten Thousand Swords Return","Quần thể","Area Target","","",6,17485,17490
+17491,174,"Lạc Lôi Thuật","Falling Thunder Art","Đơn thể","Single Target","","",6,17491,17496
+17492,174,"Lạc Lôi Thuật","Falling Thunder Art","Đơn thể","Single Target","","",6,17491,17496
+17493,174,"Lạc Lôi Thuật","Falling Thunder Art","Đơn thể","Single Target","","",6,17491,17496
+17494,174,"Lạc Lôi Thuật","Falling Thunder Art","Đơn thể","Single Target","","",6,17491,17496
+17495,174,"Lạc Lôi Thuật","Falling Thunder Art","Đơn thể","Single Target","","",6,17491,17496
+17496,174,"Lạc Lôi Thuật","Falling Thunder Art","Đơn thể","Single Target","","",6,17491,17496
+17497,174,"Điện Quang Hỏa Thạch","Lightning Flash","Bị Động","Passive","","",6,17497,17502
+17498,174,"Điện Quang Hỏa Thạch","Lightning Flash","Bị Động","Passive","","",6,17497,17502
+17499,174,"Điện Quang Hỏa Thạch","Lightning Flash","Bị Động","Passive","","",6,17497,17502
+17500,175,"Điện Quang Hỏa Thạch","Lightning Flash","Bị Động","Passive","","",6,17497,17502
+17501,175,"Điện Quang Hỏa Thạch","Lightning Flash","Bị Động","Passive","","",6,17497,17502
+17502,175,"Điện Quang Hỏa Thạch","Lightning Flash","Bị Động","Passive","","",6,17497,17502
+17503,175,"Bôn Lôi Chưởng","Thunderbolt Palm","Đơn thể","Single Target","","",6,17503,17508
+17504,175,"Bôn Lôi Chưởng","Thunderbolt Palm","Đơn thể","Single Target","","",6,17503,17508
+17505,175,"Bôn Lôi Chưởng","Thunderbolt Palm","Đơn thể","Single Target","","",6,17503,17508
+17506,175,"Bôn Lôi Chưởng","Thunderbolt Palm","Đơn thể","Single Target","","",6,17503,17508
+17507,175,"Bôn Lôi Chưởng","Thunderbolt Palm","Đơn thể","Single Target","","",6,17503,17508
+17508,175,"Bôn Lôi Chưởng","Thunderbolt Palm","Đơn thể","Single Target","","",6,17503,17508
+17509,175,"Phong Trì Điện Xế","Lightning Speed","Bị Động","Passive","","",6,17509,17514
+17510,175,"Phong Trì Điện Xế","Lightning Speed","Bị Động","Passive","","",6,17509,17514
+17511,175,"Phong Trì Điện Xế","Lightning Speed","Bị Động","Passive","","",6,17509,17514
+17512,175,"Phong Trì Điện Xế","Lightning Speed","Bị Động","Passive","","",6,17509,17514
+17513,175,"Phong Trì Điện Xế","Lightning Speed","Bị Động","Passive","","",6,17509,17514
+17514,175,"Phong Trì Điện Xế","Lightning Speed","Bị Động","Passive","","",6,17509,17514
+17515,175,"Lôi Trượng Thiên Tôn","Thunder Staff Celestial","Bị Động","Passive","","",6,17515,17520
+17516,175,"Lôi Trượng Thiên Tôn","Thunder Staff Celestial","Bị Động","Passive","","",6,17515,17520
+17517,175,"Lôi Trượng Thiên Tôn","Thunder Staff Celestial","Bị Động","Passive","","",6,17515,17520
+17518,175,"Lôi Trượng Thiên Tôn","Thunder Staff Celestial","Bị Động","Passive","","",6,17515,17520
+17519,175,"Lôi Trượng Thiên Tôn","Thunder Staff Celestial","Bị Động","Passive","","",6,17515,17520
+17520,175,"Lôi Trượng Thiên Tôn","Thunder Staff Celestial","Bị Động","Passive","","",6,17515,17520
+17521,175,"Bồ Đề Quyết","Bodhi Art","Bản thân","Self","","",6,17521,17526
+17522,175,"Bồ Đề Quyết","Bodhi Art","Bản thân","Self","","",6,17521,17526
+17523,175,"Bồ Đề Quyết","Bodhi Art","Bản thân","Self","","",6,17521,17526
+17524,175,"Bồ Đề Quyết","Bodhi Art","Bản thân","Self","","",6,17521,17526
+17525,175,"Bồ Đề Quyết","Bodhi Art","Bản thân","Self","","",6,17521,17526
+17526,175,"Bồ Đề Quyết","Bodhi Art","Bản thân","Self","","",6,17521,17526
+17527,175,"Hỗn Nguyên Chân Pháp","Primordial True Law","Bị Động","Passive","","",6,17527,17532
+17528,175,"Hỗn Nguyên Chân Pháp","Primordial True Law","Bị Động","Passive","","",6,17527,17532
+17529,175,"Hỗn Nguyên Chân Pháp","Primordial True Law","Bị Động","Passive","","",6,17527,17532
+17530,175,"Hỗn Nguyên Chân Pháp","Primordial True Law","Bị Động","Passive","","",6,17527,17532
+17531,175,"Hỗn Nguyên Chân Pháp","Primordial True Law","Bị Động","Passive","","",6,17527,17532
+17532,175,"Hỗn Nguyên Chân Pháp","Primordial True Law","Bị Động","Passive","","",6,17527,17532
+17533,175,"Lôi Quang Bào Hao","Thunder Roar","Quần thể","Area Target","","",2,17533,17534
+17534,175,"Lôi Quang Bào Hao","Thunder Roar","Quần thể","Area Target","","",2,17533,17534
+17535,175,"Phi Vân Chấn Điện","Flying Cloud Thunder Shock","Đơn thể","Single Target","","",6,17535,17540
+17536,175,"Phi Vân Chấn Điện","Flying Cloud Thunder Shock","Đơn thể","Single Target","","",6,17535,17540
+17537,175,"Phi Vân Chấn Điện","Flying Cloud Thunder Shock","Đơn thể","Single Target","","",6,17535,17540
+17538,175,"Phi Vân Chấn Điện","Flying Cloud Thunder Shock","Đơn thể","Single Target","","",6,17535,17540
+17539,175,"Phi Vân Chấn Điện","Flying Cloud Thunder Shock","Đơn thể","Single Target","","",6,17535,17540
+17540,175,"Phi Vân Chấn Điện","Flying Cloud Thunder Shock","Đơn thể","Single Target","","",6,17535,17540
+17541,175,"Điện Thiểm","Lightning Flash Step","Bị Động","Passive","","",6,17541,17546
+17542,175,"Điện Thiểm","Lightning Flash Step","Bị Động","Passive","","",6,17541,17546
+17543,175,"Điện Thiểm","Lightning Flash Step","Bị Động","Passive","","",6,17541,17546
+17544,175,"Điện Thiểm","Lightning Flash Step","Bị Động","Passive","","",6,17541,17546
+17545,175,"Điện Thiểm","Lightning Flash Step","Bị Động","Passive","","",6,17541,17546
+17546,175,"Điện Thiểm","Lightning Flash Step","Bị Động","Passive","","",6,17541,17546
+17547,175,"Ngũ Lôi Oanh Đỉnh","Five Thunder Strike","Quần thể","Area Target","","",6,17547,17552
+17548,175,"Ngũ Lôi Oanh Đỉnh","Five Thunder Strike","Quần thể","Area Target","","",6,17547,17552
+17549,175,"Ngũ Lôi Oanh Đỉnh","Five Thunder Strike","Quần thể","Area Target","","",6,17547,17552
+17550,175,"Ngũ Lôi Oanh Đỉnh","Five Thunder Strike","Quần thể","Area Target","","",6,17547,17552
+17551,175,"Ngũ Lôi Oanh Đỉnh","Five Thunder Strike","Quần thể","Area Target","","",6,17547,17552
+17552,175,"Ngũ Lôi Oanh Đỉnh","Five Thunder Strike","Quần thể","Area Target","","",6,17547,17552
+17553,175,"Gia Tăng Sát Thương","Damage Enhancement","Bị Động","Passive","","",6,17553,17558
+17554,175,"Gia Tăng Sát Thương","Damage Enhancement","Bị Động","Passive","","",6,17553,17558
+17555,175,"Gia Tăng Sát Thương","Damage Enhancement","Bị Động","Passive","","",6,17553,17558
+17556,175,"Gia Tăng Sát Thương","Damage Enhancement","Bị Động","Passive","","",6,17553,17558
+17557,175,"Gia Tăng Sát Thương","Damage Enhancement","Bị Động","Passive","","",6,17553,17558
+17558,175,"Gia Tăng Sát Thương","Damage Enhancement","Bị Động","Passive","","",6,17553,17558
+17559,175,"Thuẫn Đạo Pháp","Shield Dao Art","Quần thể","Area Target","","",6,17559,17564
+17560,175,"Thuẫn Đạo Pháp","Shield Dao Art","Quần thể","Area Target","","",6,17559,17564
+17561,175,"Thuẫn Đạo Pháp","Shield Dao Art","Quần thể","Area Target","","",6,17559,17564
+17562,175,"Thuẫn Đạo Pháp","Shield Dao Art","Quần thể","Area Target","","",6,17559,17564
+17563,175,"Thuẫn Đạo Pháp","Shield Dao Art","Quần thể","Area Target","","",6,17559,17564
+17564,175,"Thuẫn Đạo Pháp","Shield Dao Art","Quần thể","Area Target","","",6,17559,17564
+17565,175,"Phiến Thuẫn Thiên Quân","Shield Wall Army","Bị Động","Passive","","",6,17565,17570
+17566,175,"Phiến Thuẫn Thiên Quân","Shield Wall Army","Bị Động","Passive","","",6,17565,17570
+17567,175,"Phiến Thuẫn Thiên Quân","Shield Wall Army","Bị Động","Passive","","",6,17565,17570
+17568,175,"Phiến Thuẫn Thiên Quân","Shield Wall Army","Bị Động","Passive","","",6,17565,17570
+17569,175,"Phiến Thuẫn Thiên Quân","Shield Wall Army","Bị Động","Passive","","",6,17565,17570
+17570,175,"Phiến Thuẫn Thiên Quân","Shield Wall Army","Bị Động","Passive","","",6,17565,17570
+17571,175,"Pháp Lực Hộ Thuẫn","Mana Shield","Quần thể","Area Target","","",6,17571,17576
+17572,175,"Pháp Lực Hộ Thuẫn","Mana Shield","Quần thể","Area Target","","",6,17571,17576
+17573,175,"Pháp Lực Hộ Thuẫn","Mana Shield","Quần thể","Area Target","","",6,17571,17576
+17574,175,"Pháp Lực Hộ Thuẫn","Mana Shield","Quần thể","Area Target","","",6,17571,17576
+17575,175,"Pháp Lực Hộ Thuẫn","Mana Shield","Quần thể","Area Target","","",6,17571,17576
+17576,175,"Pháp Lực Hộ Thuẫn","Mana Shield","Quần thể","Area Target","","",6,17571,17576
+17577,175,"Lôi Minh","Thunder Roar","Bị Động","Passive","","",6,17577,17582
+17578,175,"Lôi Minh","Thunder Roar","Bị Động","Passive","","",6,17577,17582
+17579,175,"Lôi Minh","Thunder Roar","Bị Động","Passive","","",6,17577,17582
+17580,175,"Lôi Minh","Thunder Roar","Bị Động","Passive","","",6,17577,17582
+17581,175,"Lôi Minh","Thunder Roar","Bị Động","Passive","","",6,17577,17582
+17582,175,"Lôi Minh","Thunder Roar","Bị Động","Passive","","",6,17577,17582
+17583,175,"Tật Quang Điện Ảnh","Swift Lightning Shadow","Đơn thể","Single Target","","",2,17583,17584
+17584,175,"Tật Quang Điện Ảnh","Swift Lightning Shadow","Đơn thể","Single Target","","",2,17583,17584

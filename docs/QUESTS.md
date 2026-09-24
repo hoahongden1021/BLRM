@@ -16,6 +16,7 @@ Status: `UNKNOWN` (protocol)
 - On the original client, quest state is **packet-driven**: `RoleQuest` is built only
   in `GameWorld.getFunctioRoleQuest()` (`GameWorld.java:2234`). Type/state/condition
   enums are in `QuestConstants.java`. See `docs/research/PC_SKILLS_EQUIPMENT_QUESTS.md`.
+  Skill/class/weapon provenance (separate from quests): `docs/research/SKILL_CLASS_WEAPON_MAP.md`.
 
 Status for static PC quest text source in these trees: `VERIFIED` **absent**.
 

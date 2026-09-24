@@ -22,6 +22,26 @@ achievement/`client_config.properties`.
 
 ---
 
+## Skill families, classes, weapon limits (2026-09-24)
+
+Catalog: `docs/research/SKILL_CLASS_WEAPON_MAP.md`,
+CSV `docs/research/skill_family_catalog.csv` (DESCRIPTION_ONLY).
+
+- Families `id/100`: 171=80, 172=22, 173=97, 174=100, 175=85 (384 total);
+  adjacent same-name IDs = rank-step groups (usually 6, sometimes 2).
+- **No static family→class table** in PC conf or original DEX → class column
+  UNKNOWN. Do not infer class from 171xx prefixes or skill names.
+- Original `OCCUPATION_NAMES` = 力士,刺客,唤雷师,天师,武神,圣仙;
+  create-role uses first four (`RoleLogin` `length-2`); 4/5 via NewJob.
+- `WEAPONTYPE_NAMES` = 刀,剑,斧,法剑,羽扇,法杖.
+- Skill weapon/job restrictions and MP/CD/level are **packet-driven**
+  (`RoleQuickUse.setWuQiXianZhi`/`setJobXianZhi`, `processSkillDetail`,
+  `readRoleSkill`); `needWeaponType_*` empty in conf (not “no rules”).
+- PC SkillTree logs `rank`/`lv`/`needSkillId` from `main.b.a.f.M` network fields.
+- `GSkillData` appears unused (no external smali refs this session).
+
+---
+
 ## Current milestone
 
 The project has crossed the minimum world-entry milestone:

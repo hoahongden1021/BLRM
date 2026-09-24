@@ -23,6 +23,15 @@ The real server-driven NPC/mob system is not yet fully reconstructed.
 
 Do not infer entity identity from visual similarity alone.
 
+## Character classes / skills (2026-09-24)
+
+- Occupations (original): 力士(0), 刺客(1), 唤雷师(2), 天师(3), 武神(4), 圣仙(5);
+  create-role UI only exposes 0–3. See `CommonConstants.OCCUPATION_NAMES`.
+- Skill families 171–175: **class ownership UNKNOWN** (no static map).
+- Weapon types: 刀/剑/斧/法剑/羽扇/法杖; skill weapon limits arrive in packets.
+- Detail: `docs/research/SKILL_CLASS_WEAPON_MAP.md`.
+Do not invent a family→class assignment from names or ID prefixes.
+
 ---
 
 ## Tutorial-relevant names
