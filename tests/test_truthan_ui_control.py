@@ -24,6 +24,32 @@ class ControllerTests(unittest.TestCase):
             with self.assertRaises(ui.Blocked):
                 ui.role_action(*args)
 
+    def test_name_visibility_tolerates_android_text_cursor_only(self):
+        self.assertTrue(ui.name_visible([{"text": "CodexU|"}], "CodexU"))
+        self.assertTrue(ui.name_visible([{"text": "CodexU"}], "CodexU"))
+        self.assertFalse(ui.name_visible([{"text": "CodexU2|"}], "CodexU"))
+        self.assertFalse(ui.name_visible([{"text": "codexu|"}], "CodexU"))
+        self.assertFalse(ui.name_visible([{"text": "DONE"}], "CodexU"))
+
+    def test_creation_guard_is_scoped_to_one_server_session(self):
+        other_server = {"attempted": True, "started": 1.0, "server_pid": 11,
+                        "server_creation": "/Date(1000)/"}
+        self.assertEqual(ui.role_action(0, 4, False, other_server,
+                                        {"server_creation": "/Date(2000)/"}), "create")
+        with self.assertRaisesRegex(ui.Blocked, "duplicate"):
+            ui.role_action(0, 4, False, other_server, {"server_creation": "/Date(1000)/"})
+        with self.assertRaisesRegex(ui.Blocked, "duplicate"):
+            ui.role_action(0, 4, False, other_server, None)
+        with self.assertRaisesRegex(ui.Blocked, "duplicate"):
+            ui.role_action(0, 4, False, {"attempted": True}, {"server_creation": "/Date(1)/"})
+        self.assertFalse(ui.creation_record_blocks({"existing_role_observed": True},
+                                                   {"server_creation": "/Date(2000)/"}))
+        record = ui.creation_record({"started": 5.0, "server_pid": 7,
+                                     "server_creation": "/Date(9)/"})
+        self.assertEqual(record["server_creation"], "/Date(9)/")
+        self.assertEqual(record["server_pid"], 7)
+        self.assertTrue(record["attempted"])
+
     def test_unchanged_stale_other_scene_or_role_is_not_movement(self):
         before = dict(game_connected=True, scene={"id": 9068}, updated_unix_ms=100,
                       player=dict(id=1, x=180, y=230, position_source="server_scene_state"))

@@ -1,6 +1,32 @@
 # Tru Than / 诛神OL Android 1.17 — Project State
 
-Latest tooling milestone (2026-09-25): screen watcher repair tested on the real
+Latest milestone (2026-09-26, real client): **scene 9068 NPC interaction is
+now VERIFIED end to end.** One LocalServer v0.26 process (PID 12280, ports
+19000/29000) stayed alive across spawn, movement, selection and dialogue. The
+client was restarted only (`bootstrap --reuse-session --adb-only
+--restart-client`, `role_count=1`, `create_sent=false`) so the single existing
+role was reused. After `cmd10` the server sent five `cmd132` records
+(230010 Beginner Guide @170,232 obj1014; 230011 Guide Fairy @190,216 obj1015;
+230012 Village Head @190,248 obj1016; 230110 Fire Fox @210,232 obj1155;
+230111 Reconstructed Creature 2077 @210,248 obj2077), rendered as a sprite
+cluster. A double tap at device `(990,630)` produced RX `cmd=120` with body
+`0003827b` = 230011, the client rendered the function list, tapping `1.Talk`
+produced RX `cmd=73` with the same body, and the rendered title/text matched
+`interaction.title`/`interaction.text` byte for byte. The `flags: []` blocker
+(`ReadNpcFlagFuction` returning null, so `onPointerCheckNPC` never sent cmd120)
+was fixed to `"flags": [5]` for the three NPCs only; the two monsters keep `[]`
+and use the `canHit == 1` branch. Screen geometry is now measured:
+`CANVAS_W = 789`, `CANVAS_H = 424`, scale 3.0, app content box device
+x `393..2758` / y `0..1271`, `win_x = 0`, `win_y = mapY - 212`, so
+`device_x = 393 + 3*(mapX - win_x)` and `device_y = 3*(mapY - win_y)`; the
+tap-to-walk transform `(tile*16, tile*16 + win_y)` was confirmed twice.
+cmd136 request layout corrected to **19 bytes** (docs said 18) and the full
+cmd137 reader is now documented; no cmd136/cmd137 frame exists in any capture,
+so combat response stays UNKNOWN. Evidence:
+`server/truthan_packet_logs/20260926_011006_p19000_127.0.0.1_52422.log`,
+`docs/research/NPC_INTERACTION_HANDOFF.md`, `docs/research/ui_control_images/run_20260926_*.png`.
+
+Prior tooling milestone (2026-09-25): screen watcher repair tested on the real
 Android emulator. Detached start/parent-exit behavior, continuous decode,
 separate frame/OCR freshness, bounded stream reconnect, safe UI observation,
 dimension/staleness tap guards, and ADB fallback were exercised. Final soak:
@@ -41,10 +67,15 @@ ACCOUNT_LOGIN → auth cmd42/−42 **VERIFIED** (packet log
 `processServerList`). Post-auth: client opens 19000 then **immediately
 peer_eof, zero cmd277**; UI stuck NETWORK_ERROR `网络错误` + `读取中...100%`
 (State 100 / `tcpState` not OPEN). Cause **UNKNOWN**. Android client never
-reached server list, role list, or IN_GAME — **no visual PASS**; entity
+reached server list, role list, or IN_GAME - **no visual PASS**; entity
 rendering this session unverified. Taps need focus-then-activate
-(double-tap ~700ms); UI lag 3–5s. Evidence: `docs/PROTOCOL.md`,
+(double-tap ~700ms); UI lag 3-5s. Evidence: `docs/PROTOCOL.md`,
 `docs/AUTOMATION_BOOTSTRAP.md`, `docs/RE_FINDINGS.md`.
+**Superseded by the 2026-09-25/26 runs below:** a later run reached IN_GAME
+with one role, and the 2026-09-26 session entered scene 9068, rendered five
+entities and completed the NPC dialogue. The 2026-09-25 `peer_eof` cause was
+never isolated; treat it as a historical failure mode of that specific launch,
+not a current blocker.
 
 Research + server (2026-09-25): cmd9 caller trace complete —
 `sendGetNpcListInSceneMessage` has **0 call sites** (JADX+smali); cmd9 response
@@ -194,19 +225,22 @@ Next action: Fix the Python server startup command in `02_test_npc_probe.bat` to
   48 tests total).
   This includes malformed asset handling, switch-off behavior, packet layout,
   and the local NPC interaction socket flow.
-- cmd136's monster request is statically decoded; cmd137's response remains
-  blocked by unresolved nested skill-effect/property records. No combat result
-  packet is fabricated.
+- cmd136's request body is statically decoded (19 bytes, corrected 2026-09-26).
+  cmd137's nested skill-effect and property records are now fully traced from
+  the client readers and documented in `docs/PROTOCOL.md`, but no cmd137 frame
+  has ever been captured, so the layout is a static contract only. No combat
+  result packet is fabricated; server combat response remains UNKNOWN.
 - Map sockets poll every 60 seconds and continue after idle socket timeouts;
   extended idle runtime behavior is not yet tested.
 - `tools/truthan_ui_control.py bootstrap --adb-only` captures with ADB +
   RapidOCR while retaining freshness and post-action checks. The screen watcher
   is stopped. Its guarded `--reuse-session --no-create` attempt reached ROLE_LIST
   after one login exchange and observed server `cmd=20` role_count=0; it sent no
-  create request and stopped. There was no existing role to reuse, so populated-
-  scene entry, movement, NPC selection, dialogue, and published screenshots
-  remain unverified. Do not retry login, create a role, or restart the server
-  under this session's constraints.
+  create request and stopped. **Superseded:** a later run created exactly one
+  role on a server with an empty ledger, and the 2026-09-26 session reused it
+  (`role_count=1`, `create_sent=false`) without a second creation request.
 - The earlier continuation restarted the runtime before the user changed the
   workflow to reuse the existing process and character; no restart was made
-  after that correction. The resulting role_count=0 is the concrete blocker.
+  after that correction. The role_count=0 result belongs to that superseded
+  attempt; the current constraint is only "never submit a second creation while
+  the existing role is visible".

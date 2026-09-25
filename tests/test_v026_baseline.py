@@ -433,7 +433,8 @@ class TestV026Baseline(unittest.TestCase):
         self.assertEqual(len(ents), 5)
         self.assertEqual(sum(ent["kind"] == "npc" for ent in ents), 3)
         self.assertEqual(sum(ent["kind"] == "monster" for ent in ents), 2)
-        self.assertTrue(all(ent["flags"] == b"" for ent in ents))
+        self.assertTrue(all(ent["flags"] == b"\x05" for ent in ents[:3]))
+        self.assertTrue(all(ent["flags"] == b"" for ent in ents[3:]))
         self.assertEqual([ent["object_data_id"] for ent in ents],
                          [1014, 1015, 1016, 1155, 2077])
         self.assertEqual([ent["reference_model_id"] for ent in ents[:4]],

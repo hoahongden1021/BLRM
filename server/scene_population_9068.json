@@ -30,7 +30,7 @@
       "action_id": 0,
       "direction": 0,
       "appearance_effect_gate": 1,
-      "flags": [],
+      "flags": [5],
       "interaction": {
         "greeting": "Local reconstructed guide. Original NPC identity and quest data are unknown.",
         "function_id": 7,
@@ -62,7 +62,7 @@
       "action_id": 0,
       "direction": 0,
       "appearance_effect_gate": 1,
-      "flags": [],
+      "flags": [5],
       "interaction": {
         "greeting": "Local reconstructed guide. Original NPC identity and quest data are unknown.",
         "function_id": 7,
@@ -94,7 +94,7 @@
       "action_id": 0,
       "direction": 0,
       "appearance_effect_gate": 1,
-      "flags": [],
+      "flags": [5],
       "interaction": {
         "greeting": "Local reconstructed guide. Original NPC identity and quest data are unknown.",
         "function_id": 7,

@@ -386,10 +386,38 @@ comparative references only. Original Android 1.17 `.scn` walkability validates
 the chosen reconstructed points but contains no entity spawn table.
 
 Server-side cmd120/cmd73 interactions are configured per NPC. The reply shapes
-match the static 1.17 readers, but there is no successful client dialogue
-capture yet. Quest data is intentionally absent. Monster selection is enabled;
-server-side combat remains UNKNOWN because cmd137's nested skill effect and
-property update records lack a captured/fully decoded response schema.
+match the static 1.17 readers. Quest data is intentionally absent. Monster
+selection is enabled; server-side combat remains UNKNOWN because cmd137's
+nested skill effect and property update records lack a captured/fully decoded
+response schema.
+
+### 2026-09-26: NPC flag value correction and live dialogue proof
+
+The three NPC records in `server/scene_population_9068.json` carried
+`"flags": []`, which made `GameWorld.ReadNpcFlagFuction()` (`:14100`) return
+`null` and `onPointerCheckNPC()` (`:2685`) return before
+`sendGetNpcMissionListMessage()` (`:2691`) - no cmd120 could ever be sent. The
+records now carry `"flags": [5]`:
+
+- `NPC_FLAG_TALK = 5` (`CommonConstants:221`) and
+  `NPC_FLAG_FUNCTION[5] = {7}` (`:616`) match the existing
+  `interaction.function_id: 7` (`NPC_FUNCTION_TALK = 7`, `:314`).
+- Flag 4 is explicitly blocked by `Util.testNpcFlag(gnpc.Flag, 4) &&
+  gnpc.Flag.length == 1` (`:2688`), so `[4]` would not work.
+- The two monster records keep `"flags": []`; they take the `canHit == 1`
+  branch (`:2660`) and never send cmd120.
+
+Wire proof: the three NPC cmd132 frames grew by exactly one byte
+(77 -> 78, 74 -> 75, 75 -> 76) while the two monster frames did not
+(71, 90), and the NPC flag block decodes to count `01`, value `05`.
+
+Live result with the real Android 1.17 client: the double tap at device
+`(990,630)` produced RX cmd120 with body `00 03 82 7b` = 230011, the client
+rendered the function list, tapping `1.Talk` produced RX cmd73 with the same
+body, and the rendered title/text matched `interaction.title` and
+`interaction.text` byte for byte. Status `VERIFIED` for the flow; entity
+identity remains `RECONSTRUCTED` / `UNKNOWN`. Detail:
+`docs/research/NPC_INTERACTION_HANDOFF.md`.
 
 Stopping criterion reached: definite shared-ID bridge found. No additional web
 search was needed to establish it. Actual 彩云仙子 ID/object still requires original

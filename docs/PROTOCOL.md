@@ -77,6 +77,10 @@ never completed 19000 handshake this session — see post-auth blocker above)
 | 10 | C -> S then S -> C | ENTER_SCENE_READY handshake | VERIFIED |
 | 133 | C -> S | player movement update | PARTIAL |
 | 132 | S -> C | visible entity/sprite spawn/update family | PARTIAL |
+| 120 | C -> S then S -> C | NPC function list request (body = NPC runtime i32) / function-list reply | VERIFIED (real client 2026-09-26) |
+| 73 | C -> S then S -> C | NPC talk request (body = NPC runtime i32) / talk reply | VERIFIED (real client 2026-09-26) |
+| 136 | C -> S then S -> C | `SPRITE_SKILL_MESSAGE` attack/skill request; client also dispatches incoming 136 to `processSpriteSkillMessage` | PARTIAL (request layout static; no capture) |
+| 137 | S -> C | `SPRITE_SKILLRESULT_MESSAGE` skill result / damage broadcast | PARTIAL (reader fully traced, no capture) |
 | 9 | S -> C | NPC navigation-list add/remove, separately read from cmd132 | PARTIAL |
 | 9 | C -> S | `sendGetNpcListInSceneMessage` body=`putShort(scene.intId)` — **no call sites found** in JADX or smali | PARTIAL (definition only) |
 | 614 | C -> S | observed post-join client request; exact semantic not yet documented | UNKNOWN |
@@ -610,17 +614,137 @@ Client source evidence (`GameWorld.java`):
   single data-configured talk function/dialogue. **No quest accept/deliver rows
   are implemented.** The client has not yet confirmed these configured replies.
 
-Combat investigation (`GameWorld.java`): `sendAttackMessage()` (`:13429`)
-serializes cmd136 as target ID i32, target type i8, target X/Y i16, player
-action type/action/direction i8 each, skill ID i16, player X/Y i16, speed i8
-(18-byte body). `processSpriteSkillResultMessage()` (`:11411`, dispatched for
-cmd137) reads a flags byte, source ID/type, target ID/type, a short, movement
-mode and optional XY shorts, two i32 values, two bytes, three skill-effect
-records, then entity property updates. The nested effect/property record
-formats and a captured valid cmd137 outcome are not available here. No cmd137
-response or damage is fabricated; this is the exact blocker to a playable
-server-side attack response. Status: request layout PARTIAL (static client
-source), server combat result UNKNOWN.
+### 2026-09-26: live cmd120 / cmd73 verification
+
+Status: `VERIFIED` for the request and reply path with NPC `230011`.
+The run kept one LocalServer v0.26 process (PID 12280) alive across spawn,
+movement, selection and dialogue; client `com.t4game` 1.17.01.15120810 on
+`emulator-5554`. Log:
+`server/truthan_packet_logs/20260926_011006_p19000_127.0.0.1_52422.log`.
+
+Wire facts established in this run:
+
+- Frame envelope (both directions): `24 25`, u16-BE length `= total - 2`,
+  6-byte prefix, u16-BE command, then body. Client request frames are 16 bytes
+  total, so the cmd120/cmd73 body is exactly the 4-byte NPC runtime i32.
+- Request body captured for both commands: `00 03 82 7b` = **230011**.
+- cmd120 reply, 103 bytes total: u16-BE greeting string (76 bytes), four zero
+  quest-group count bytes, signed-byte function count `01`, then
+  `flagId = 00`, `flag = 0007` (i16, `NPC_FUNCTION_TALK = 7`), u16-BE label
+  length `0004`, `"Talk"`.
+- cmd73 reply, 86 bytes total: status `00`, count `01`, u16-BE
+  `"Starter area"`, u16-BE `"This local guide has no recovered original quest
+  records."`. Both strings match `interaction.title` / `interaction.text` of
+  NPC `230011` in `server/scene_population_9068.json` byte for byte, and both
+  were rendered by the client.
+
+Blocker found and fixed in this run: `"flags": []` on the population records
+made `ReadNpcFlagFuction()` (`GameWorld:14100`) return `null`, and
+`onPointerCheckNPC()` (`:2685`) then returned before
+`sendGetNpcMissionListMessage()` (`:2691`). The three NPC records now carry
+`"flags": [5]` (`NPC_FLAG_TALK = 5`, `CommonConstants:221`, which maps to
+`NPC_FLAG_FUNCTION[5] = {7}`, matching `interaction.function_id: 7`). The two
+monster records keep `"flags": []` because they take the `canHit == 1` branch
+(`:2660`). Wire confirmation: the three NPC cmd132 frames grew by exactly one
+byte (77 -> 78, 74 -> 75, 75 -> 76) while the two monster frames did not
+(71, 90).
+
+Selection geometry used to place the tap (measured from live screenshots):
+app content box device x `393..2758`, y `0..1271`; `CANVAS_W = 789`,
+`CANVAS_H = 424`, scale `3.0`; `win_x = 0` near spawn, `win_y = mapY - 212`.
+`onPointerSelectNPC()` (`:15412`) accepts logical x in `[u-21, u+27]` and
+y in `[v-42, v+10]`. From player `(192,226)` the box of NPC 230011 at
+`(190,216)` is device x `900..1044`, y `480..636`; the double tap at
+`(990,630)` selected it. Two earlier taps independently confirmed the
+tap -> walk transform `(tile*16, tile*16 + win_y)`.
+
+Full detail, screenshots and status split: `docs/research/NPC_INTERACTION_HANDOFF.md`.
+
+### cmd136 request (SPRITE_SKILL_MESSAGE)
+
+`sendAttackMessage(int, int, byte)` `GameWorld.java:13429` writes, in order:
+
+| # | Field | Type |
+|---:|---|---|
+| 1 | target id | i32 |
+| 2 | target type | i8 |
+| 3 | target mapX | i16 |
+| 4 | target mapY | i16 |
+| 5 | player actionType | i8 |
+| 6 | player actionId | i8 |
+| 7 | player dir | i8 |
+| 8 | skill id | i16 (`QUICK_SKILL_ID`, branch-dependent) |
+| 9 | player/send mapX | i16 |
+| 10 | player/send mapY | i16 |
+| 11 | speed | i8 (`-1` when `GDataManager.TimeState >= 8`) |
+
+Total **19 bytes**. The previous note in this file said 18 bytes; that count
+omitted one field. `MessageCommands.SPRITE_SKILL_MESSAGE = 136`,
+`SPRITE_SKILLRESULT_MESSAGE = 137`, `SPRITE_SKILL_LEAD_MESSAGE = 143`
+(`mmorpg/dreamgame/MessageCommands.java:589-591`). The client also dispatches
+an *incoming* 136 to `processSpriteSkillMessage()` (`case 136`,
+`GameWorld.java:7308`), so 136 is bidirectional. No cmd136 frame exists in any
+capture in `server/truthan_packet_logs/`; status stays `PARTIAL`.
+
+### cmd137 reader (SPRITE_SKILLRESULT_MESSAGE)
+
+Dispatch: `case 137: processSpriteSkillResultMessage();` (`GameWorld.java:7311`).
+All offsets below are from the command body and were read directly from
+`processSpriteSkillResultMessage` (`:11411`), `readSkillActionSEData`
+(`:13177`) and `readSpriteUpdateProperty` (`:13187`). Status: `PARTIAL`
+(complete static reader; no captured cmd137 exists, so nothing here has been
+validated against a real frame).
+
+| # | Field | Type | Notes |
+|---:|---|---|---|
+| 1 | flags | u8 | bit0 = `z3`, bit1 = `z4` |
+| 2 | source id | i32 | runtime id |
+| 3 | source type | i8 | 3 = GUser |
+| 4 | target id | i32 | |
+| 5 | target type | i8 | |
+| 6 | unused | i16 | read and discarded (`:11435`) |
+| 7 | moveMode | i8 | `0` or `1` gates the next field |
+| 8 | dest x, dest y | 2 x i16 | present only when moveMode is 0 or 1 |
+| 9 | source hp | i32 | |
+| 10 | source mp | i32 | |
+| 11 | unused | i8 | read and discarded (`:11444`) |
+| 12 | dir | i8 | passed to `setAction` |
+| 13 | skill effect records | 3 x record A | see below |
+| 14 | property count | u8 | `b6`, loop `while i < b6` |
+| 15 | property records | count x record B | see below |
+
+Record A (`readSkillActionSEData`, one per slot `0..2`):
+
+| Field | Type | Notes |
+|---|---|---|
+| skillActionId | i8 | |
+| objectDataId | i16 | |
+| specialEffectDataId | i16 | **only when objectDataId != -1** |
+
+Record B (fixed prefix read in the loop at `:11515`-`:11522`, then
+`readSpriteUpdateProperty` at `:11533`):
+
+| Field | Type | Notes |
+|---|---|---|
+| spriteId | i32 | runtime id |
+| spriteType | i8 | selects the 3-extra-byte branch |
+| hitResult | i8 | 0 miss, 1 dodge, 2 block, 3 zhaojia, 4 baoji, 6 xishou, 7 huomian, 8 dikang, 9 mianyi; other values drive the heal/hurt branches |
+| value1 | i32 | damage / heal display value |
+| value2 | i32 | second display value |
+| hp | i32 | current hp written to `attr_baseHP` (`:11586`) |
+| mp | i32 | current mp written to `attr_baseMP` (`:11587`) |
+| maxHp | i32 | `readSpriteUpdateProperty:13191` |
+| maxMp | i32 | `:13192` |
+| speed | u8 | `:13193` |
+| wuxingType | i8 | `:13194`, `-1` is rewritten to 5 |
+| extra 1..3 | 3 x i8 | **only when spriteType == 3** (`:13195`-`:13199`) |
+
+A record is read even when `getSpriteFromHash` returns `null`, so a reply must
+still serialize the full record for every listed sprite. This is the exact
+blocker to a playable server-side attack response: no cmd137 frame has ever
+been captured, so the field order above is a static client-read contract only.
+No cmd137 response or damage value is fabricated.
+
 
 The socket receive loop now uses a 60-second poll timeout and continues after
 each `socket.timeout`; it does not close an otherwise-live idle map connection

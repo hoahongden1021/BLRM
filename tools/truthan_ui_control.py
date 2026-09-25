@@ -28,6 +28,17 @@ LABELS = {"开始游戏", "修复游戏", "退出游戏", "登录游戏", "注�
           "网络错误", "网络故障"}
 
 
+def name_visible(items, name):
+    """True when OCR sees exactly the requested role name in the focused field.
+
+    Real-client evidence (2026-09-25, NAME_IME screenshot + rapidocr_latest.json):
+    RapidOCR returns TEXT_ASCII='CodexU|' because it folds the Android text
+    cursor into the recognized string.  Only cursor glyphs are removed; the
+    remaining text must equal the requested name exactly.
+    """
+    return any(i["text"].replace("|", "") == name for i in items)
+
+
 class Blocked(RuntimeError):
     pass
 
@@ -138,7 +149,7 @@ def movement_verified(before, after, action_ms):
             and (bp["x"], bp["y"]) != (ap["x"], ap["y"]))
 
 
-def role_action(count, empty_slots, has_enter, creation_record):
+def role_action(count, empty_slots, has_enter, creation_record, session=None):
     # A visible entry control with a populated row is direct UI evidence of an
     # existing role even when the fresh p19000 role-count response is absent or
     # stale (the account/role UI can appear before that connection is rebuilt).
@@ -147,14 +158,36 @@ def role_action(count, empty_slots, has_enter, creation_record):
     if count == 0 and empty_slots == 4:
         # This marker records an existing role seen in an earlier runtime;
         # it is not a role-creation attempt. Unknown ledger entries stay blocked.
-        if creation_record_blocks(creation_record):
+        if creation_record_blocks(creation_record, session):
             raise Blocked("Creation already attempted/observed; server may have reset. Refusing duplicate")
         return "create"
     raise Blocked("Role count/UI disagree or are unknown; refusing creation")
 
 
-def creation_record_blocks(record):
-    return bool(record) and record != {"existing_role_observed": True}
+def creation_record_blocks(record, session=None):
+    """Creation ledger guard scoped to one live server process.
+
+    This server keeps roles only in memory, so a restart erases them.  A ledger
+    entry written against a *different* server process must therefore not block
+    creating one role on the current empty server, while an entry written
+    against this very server process still refuses a duplicate submission.
+    """
+    if not record or record == {"existing_role_observed": True}:
+        return False
+    if record.get("attempted") is True and session:
+        recorded = record.get("server_creation")
+        current = session.get("server_creation")
+        if isinstance(recorded, str) and isinstance(current, str) and recorded and current:
+            return recorded == current
+    # Unknown ledger shape, or no session identity to compare against: refuse.
+    return True
+
+
+def creation_record(session):
+    """Durable creation intent bound to the current server process."""
+    return {"attempted": True, "started": session.get("started"),
+            "server_pid": session.get("server_pid"),
+            "server_creation": session.get("server_creation")}
 
 
 def safe_observation(obs):
@@ -381,7 +414,7 @@ class Controller:
                 return safe_observation(obs)
             state = obs["screen"]
             # Distinguish substeps, but never reset retry budget on a transient screen.
-            typed = any(i["text"] == name for i in obs["items"])
+            typed = name_visible(obs["items"], name)
             step = state + (":filled" if typed else ":empty")
             attempts[step] = attempts.get(step, 0) + 1
             if attempts[step] > 2:
@@ -403,7 +436,8 @@ class Controller:
                 items = obs["items"]
                 choice = role_action(obs["packets"]["role_count"],
                                      sum(i["text"] == "创建新角色" and i["score"] >= .95 for i in items),
-                                     any(i["text"] == "进入游戏" for i in items), read_json(LEDGER))
+                                     any(i["text"] == "进入游戏" for i in items), read_json(LEDGER),
+                                     getattr(self, "session", None))
                 if choice == "enter":
                     save_json(LEDGER, {"existing_role_observed": True})
                     obs = self.tap_label(obs, "进入游戏")
@@ -415,10 +449,13 @@ class Controller:
                 if obs["packets"].get("create_sent"):
                     raise Blocked("Creation request already sent; refusing repeat")
                 if typed:
-                    if not name_confirmed or creation_record_blocks(read_json(LEDGER)):
+                    session = getattr(self, "session", None) or {}
+                    if not name_confirmed or creation_record_blocks(read_json(LEDGER), session):
                         raise Blocked("Name not confirmed this run or creation already recorded")
                     # Durable intent BEFORE input: a crash can never cause duplicate submission.
-                    save_json(LEDGER, {"attempted": True, "started": self.started})
+                    record = creation_record(session)
+                    record["started"] = self.started
+                    save_json(LEDGER, record)
                     obs = self.tap_label(obs, "创建")
                 else:
                     obs = self.calibrated(obs, [1215, 230])

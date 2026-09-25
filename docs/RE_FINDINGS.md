@@ -318,3 +318,56 @@ long-idle client evidence has not been recorded.
 ## Screen watcher repair (2026-09-25)
 
 Real-emulator evidence for the detached screen watcher, independent frame/OCR reporting, reconnect handling, safe UI observation and ADB fallback is recorded in docs/research/SCREEN_WATCH_REPAIR_20260925.md. The final 10m11s soak advanced frames at every 30-second sample, had a maximum frame age of 301 ms and separate maximum OCR age of 3.46 s, and showed no errors or reconnects after the atomic status-write retry. This does not resolve the existing post-auth port-19000 peer EOF/bootstrap blocker described in PROJECT_STATE.md.
+
+## 2026-09-26: client screen geometry, tap transform, NPC interaction
+
+Status: `VERIFIED` for the geometry model, the tap-to-walk transform and the
+cmd120/cmd73 NPC interaction flow on the real Android 1.17 client. Evidence:
+`server/truthan_packet_logs/20260926_011006_p19000_127.0.0.1_52422.log`,
+screenshots in `docs/research/ui_control_images/run_20260926_*.png`, and
+`docs/research/NPC_INTERACTION_HANDOFF.md`.
+
+Screen geometry, measured from live screenshots of `emulator-5554`:
+
+- Device screen 2992 x 1344; the app content box is device x `393..2758`,
+  y `0..1271` (rows 1276..1305 are pure black, rows 1306..1313 are a separate
+  element below the app window).
+- Content size 2366 x 1272 device px at scale 3.0 gives
+  `CANVAS_W = 789`, `CANVAS_H = 424`; `Defaults.setResolutionRatio(getWidth(),
+  getHeight())` is called from `BeforeGame:21`, `FlashScreen:40`,
+  `MainMenu:84`.
+- `GScene.setWinDimension(0,0,CANVAS_W,CANVAS_H)` (`GScene:67`) makes
+  `screen_mapx = win_x`, `screen_mapy = win_y`; the camera is
+  `GUser:680 setWinPos(mapX - WW2, mapY - WH2)` with
+  `GMap.WW = CANVAS_W`, `WW2 = CANVAS_WW`, `WH = CANVAS_H`, `WH2 = CANVAS_HH`
+  (`GMap:50-53`), clamped by `GScene.setWinPos` (`:1987`).
+- Therefore `device_x = 393 + 3*(mapX - win_x)` and
+  `device_y = 3*(mapY - win_y)`, with `win_x = 0` near spawn and
+  `win_y = mapY - 212`.
+
+Tap model, confirmed twice against `cmd133` movement targets: a tap at device
+`(930,750)` moved the player to exactly `(176,240)`, and a tap at `(990,630)`
+moved it to exactly `(192,226)`; both equal `(tile*16, tile*16 + win_y)`.
+
+NPC selection: `onPointerSelectNPC` (`GameWorld:15412`) tests logical
+x in `[u-21, u+27]` and y in `[v-42, v+10]` for every sprite in
+`scene.objheads[1]` (ordered by `mapY` ascending, `GScene.addToView:651`, so
+the lowest `mapY` wins ties and the local player is in the same list).
+From player `(192,226)` the box of NPC 230011 at `(190,216)` is device
+x `900..1044`, y `480..636`; a double tap at `(990,630)` selected it and the
+server recorded `npc_id = 230011`.
+
+`flags` blocker and fix: `"flags": []` in `server/scene_population_9068.json`
+made `ReadNpcFlagFuction()` (`GameWorld:14100`) return `null`, so
+`onPointerCheckNPC()` (`:2685`) returned before sending cmd120. The three NPC
+records now carry `"flags": [5]` (`NPC_FLAG_TALK`, `NPC_FLAG_FUNCTION[5] =
+{7}`); the monsters keep `[]` and use the `canHit == 1` branch (`:2660`).
+The three NPC cmd132 frames grew by exactly one byte, the two monster frames
+did not, and the NPC flag block decodes to `01 05`.
+
+cmd136/cmd137: `sendAttackMessage` (`GameWorld:13429`) writes a **19-byte**
+body (the earlier note in `docs/PROTOCOL.md` said 18 and was corrected).
+`processSpriteSkillResultMessage` (`:11411`, `case 137` at `:7311`) with
+`readSkillActionSEData` (`:13177`) and `readSpriteUpdateProperty` (`:13187`)
+give a complete static cmd137 reader. No cmd136 or cmd137 frame exists in any
+capture, so combat response stays `UNKNOWN`; nothing was fabricated.
