@@ -99,6 +99,21 @@ class ControllerTests(unittest.TestCase):
         with self.assertRaisesRegex(ui.Blocked,"expired"):
             controller.action({"captured":time.time()-60},["shell","input","tap","1","1"],"test")
 
+    def test_observation_expiring_during_action_checks_never_taps(self):
+        controller=ui.Controller.__new__(ui.Controller)
+        clock=iter((100.0,103.1))
+        with patch("truthan_screen_watch._device_screen_size",return_value=(200,200)), \
+             patch.object(ui.gui,"current_focus",return_value={"truthan_foreground":True}), \
+             patch.object(ui,"time") as mocked_time, \
+             patch.object(controller,"record"), \
+             patch.object(ui.gui,"adb") as adb:
+            mocked_time.time.side_effect=lambda: next(clock)
+            with self.assertRaisesRegex(ui.Blocked,"expired"):
+                controller.action({"captured":99.9,"source":"adb","dimensions":[200,200],
+                                   "items":[],"runtime":{}},
+                                  ["shell","input","tap","1","1"],"test")
+            adb.assert_not_called()
+
     def test_watcher_observation_rejects_stale_frame_or_ocr(self):
         controller=ui.Controller.__new__(ui.Controller)
         for field, age in (("frame_age_ms", 1001), ("ocr_age_ms", 1501)):
@@ -106,6 +121,27 @@ class ControllerTests(unittest.TestCase):
                  "ocr_age_ms":0, field:age}
             with self.subTest(field=field), self.assertRaisesRegex(ui.Blocked,"stale"):
                 controller.action(obs,["shell","input","tap","1","1"],"test")
+
+    def test_delayed_watcher_observation_falls_back_to_fresh_adb_ocr(self):
+        controller=ui.Controller.__new__(ui.Controller)
+        controller.started=time.time()-10
+        fallback={"source":"adb", "captured":time.time(), "screen":"START_MENU"}
+        now=time.time()
+        delayed={"screen_state":{
+            "frame_timestamp_epoch":now-2.0,
+            "ocr_timestamp_epoch":now-1.8,
+            "frame_id":42,
+            "frame_image_frame_id":42,
+            "device_size":[2992,1344],
+        }}
+        with patch.object(ui.gui,"current_focus",return_value={"truthan_foreground":True}), \
+             patch("truthan_screen_watch.watcher_observe",return_value=delayed) as observe, \
+             patch("truthan_screen_watch._device_screen_size",return_value=(2992,1344)), \
+             patch.object(controller,"observe_adb",return_value=fallback) as adb_observe, \
+             patch.object(controller,"record"):
+            self.assertIs(controller.observe(source="auto"),fallback)
+        observe.assert_called_once_with(timeout=8.0,include_frame=True)
+        adb_observe.assert_called_once_with()
 
     def test_dimension_mismatch_never_taps(self):
         controller=ui.Controller.__new__(ui.Controller)

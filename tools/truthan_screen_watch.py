@@ -694,7 +694,26 @@ def _ocr_loop(
             "classification": classification,
             "items": items,
         }
+        from PIL import Image  # type: ignore
+
+        frame_image_path = WATCH_DIR / f"video_frame_{os.getpid()}_{frame_id}.jpg"
+        frame_image_tmp = frame_image_path.with_suffix(".tmp")
+        Image.fromarray(frame[:, :, ::-1].copy()).save(
+            frame_image_tmp, format="JPEG", quality=92
+        )
+        os.replace(frame_image_tmp, frame_image_path)
+        payload["frame_image_path"] = str(frame_image_path)
+        payload["frame_image_frame_id"] = frame_id
         _atomic_json(STATE_PATH, payload)
+        old_images = sorted(
+            WATCH_DIR.glob(f"video_frame_{os.getpid()}_*.jpg"),
+            key=lambda path: int(path.stem.rsplit("_", 1)[-1]),
+        )
+        for old_image in old_images[:-8]:
+            try:
+                old_image.unlink()
+            except OSError:
+                pass
 
         last_sig = sig
         last_frame_id = frame_id
@@ -1067,8 +1086,10 @@ def watcher_status() -> dict[str, Any]:
     }
 
 
-def watcher_observe(timeout: float = 8.0) -> dict[str, Any]:
-    """Request OCR of a post-request frame and return separate frame/OCR ages."""
+def watcher_observe(
+    timeout: float = 8.0, *, include_frame: bool = False
+) -> dict[str, Any]:
+    """Request OCR of a post-request frame and optionally return its exact image."""
     current = watcher_status()
     if not current["running"] or (current["status"] or {}).get("status") != "running":
         raise WatchError("screen watcher is unavailable; use a fresh ADB screenshot")
@@ -1081,7 +1102,24 @@ def watcher_observe(timeout: float = 8.0) -> dict[str, Any]:
         if ((meta.get("status") == "running" or meta.get("status") == "recovering")
                 and state.get("frame_timestamp_epoch", 0) >= requested_at
                 and state.get("ocr_timestamp_epoch", 0) >= requested_at):
+            if state.get("frame_image_frame_id") != state.get("frame_id"):
+                raise WatchError("OCR frame image does not match its frame_id")
+            if include_frame:
+                image_path = Path(str(state.get("frame_image_path", "")))
+                if image_path.parent.resolve() != WATCH_DIR.resolve():
+                    raise WatchError("OCR frame image path is outside the watcher directory")
+                try:
+                    frame_image = image_path.read_bytes()
+                except OSError as exc:
+                    raise WatchError(f"could not read matching OCR frame image: {exc}") from exc
             result = watcher_status()
+            result["screen_state"] = state
+            state_frame_ts = float(state["frame_timestamp_epoch"])
+            result["screen_state_frame_age_now_ms"] = max(
+                0.0, (time.time() - state_frame_ts) * 1000.0
+            )
+            if include_frame:
+                result["frame_image_bytes"] = frame_image
             result["observe_requested_at_epoch"] = requested_at
             result["observe_wait_ms"] = (time.time() - requested_at) * 1000.0
             return result
