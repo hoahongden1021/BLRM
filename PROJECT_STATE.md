@@ -3,6 +3,17 @@
 Last known stable baseline: **LocalServer v0.26**
 Current emphasis: **reverse real NPC/mob spawn + starter tutorial flow without guessing**
 
+Real-client UI controller run (2026-09-25): fresh required launch completed;
+manually navigated start/login, created exactly one role after observing four
+empty slots, entered scene 9068, and moved player 100001 from (180,230) to
+(180,258), confirmed by cmd133/runtime state. Re-entered the existing role
+after a client-only restart without another create request. `status`, safe
+`bootstrap`, and `move` controller paths exercised; focused tests: 9 OK.
+TEST OBJ1014 was not visibly confirmed in this client view (runtime probe list
+was empty; this does not establish absence from unrendered map data). Evidence:
+`docs/research/UI_CONTROL_TRACE.json`, `docs/research/UI_CONTROL_EXPLANATION.md`,
+`docs/TRUTHAN_UI_CONTROL.md`.
+
 Research + server (2026-09-25, session continuation): `opencode.json` duplicate
 `edit` keys fixed (TTpc/`BLRM-local-inputs` still deny; write unchanged;
 `NO_DUP_KEYS_OK`). Integration test `tests/test_map_entry_integration.py`

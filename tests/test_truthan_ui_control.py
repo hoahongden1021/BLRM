@@ -1,0 +1,111 @@
+"""Safety/verification tests; runtime PASS is recorded separately in research notes."""
+import json
+from pathlib import Path
+import struct
+import sys
+import time
+from types import SimpleNamespace
+from unittest.mock import patch
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "tools"))
+import truthan_ui_control as ui
+
+
+class ControllerTests(unittest.TestCase):
+    def test_role_creation_requires_ui_and_packet_agreement(self):
+        self.assertEqual(ui.role_action(0, 4, False, {}), "create")
+        self.assertEqual(ui.role_action(1, 3, True, {"attempted": True}), "enter")
+        self.assertEqual(ui.role_action(None, 3, True, {}), "enter")
+        for args in [(None, 4, False, {}), (0, 3, False, {}), (0, 4, False, {"attempted": True}),
+                     (1, 3, False, {})]:
+            with self.assertRaises(ui.Blocked):
+                ui.role_action(*args)
+
+    def test_unchanged_stale_other_scene_or_role_is_not_movement(self):
+        before = dict(game_connected=True, scene={"id": 9068}, updated_unix_ms=100,
+                      player=dict(id=1, x=180, y=230, position_source="server_scene_state"))
+        after = json.loads(json.dumps(before))
+        after["updated_unix_ms"] = 201
+        after["player"].update(y=254, position_source="cmd133")
+        self.assertTrue(ui.movement_verified(before, after, 200))
+        for key, value in [("game_connected", False), ("updated_unix_ms", 199), ("scene", {"id": 1})]:
+            changed = dict(after, **{key: value})
+            self.assertFalse(ui.movement_verified(before, changed, 200))
+        for key, value in [("y", 230), ("id", 2), ("position_source", "server_scene_state")]:
+            changed = dict(after, player=dict(after["player"], **{key: value}))
+            self.assertFalse(ui.movement_verified(before, changed, 200))
+
+    def test_connection_alone_cannot_prove_in_game(self):
+        state = dict(game_connected=True, updated_unix_ms=2000, scene={"id": 9068}, player=dict(id=1,x=180,y=230))
+        self.assertFalse(ui.world_verified("WORLD_HUD", state, {"ready": False}, 1))
+        self.assertFalse(ui.world_verified("ACCOUNT_LOGIN", state, {"ready": True}, 1))
+        self.assertFalse(ui.world_verified("WORLD_HUD", state, {"ready": True}, 3))
+        self.assertTrue(ui.world_verified("WORLD_HUD", state, {"ready": True}, 1))
+
+    def test_utf8_hud_labels_are_classified(self):
+        items = [dict(text=text, score=.99) for text in ("\u804a\u5929", "\u793e\u4ea4", "\u83dc\u5355")]
+        self.assertEqual(ui.classify(items), "WORLD_HUD")
+        readable_hud = [dict(text=text, score=.99) for text in ("\u804a\u5929", "\u753b\u8d28")]
+        self.assertEqual(ui.classify(readable_hud), "WORLD_HUD")
+
+    def test_session_identity_uses_process_start_time_without_wmi(self):
+        value = {"server_pid": 1234, "started": 100.0, "server_creation": "/Date(100000)/"}
+        with patch.object(ui.gui, "run", return_value=SimpleNamespace(
+                stdout='{"ProcessName":"python","CreationDate":"/Date(100000)/"}')) as run:
+            self.assertTrue(ui.session_alive(value))
+            self.assertIn("Get-Process", run.call_args.args[0][-1])
+        with patch.object(ui.gui, "run", return_value=SimpleNamespace(
+                stdout='{"ProcessName":"python","CreationDate":"/Date(200000)/"}')):
+            self.assertFalse(ui.session_alive(value))
+
+    def test_packet_connection_boundary_and_sanitization(self):
+        directory = ROOT / "runtime/agent/ui_control_test_fixture"
+        directory.mkdir(parents=True, exist_ok=True)
+        old = directory / "20260925_010000_p19000_old.log"
+        current = directory / "20260925_020000_p19000_new.log"
+        try:
+            old.write_text("\n".join(f"[01:00] {d}-FRAME 12 bytes port=19000 cmd={c} wire=NORMAL"
+                                    for d,c in (("RX",6),("TX",7),("TX",32),("RX",10),("TX",10))))
+            self.assertTrue(ui.packet_evidence(0,directory)["ready"])
+            frame = b"\x24\x25" + struct.pack(">HBIh",14,0,0,20) + b"\x01" + struct.pack(">i",0)
+            current.write_text("[02:00] RX-FRAME 12 bytes port=19000 cmd=6 wire=FE-PREAUTH\n"
+                               + "[02:00] RX-FRAME 52 bytes port=19000 cmd=277 wire=FE-PREAUTH\nHEX secret\nASCII password\n"
+                               + "[02:00] TX-FRAME 16 bytes port=19000 cmd=20 wire=SERVER-NORMAL\nHEX " + frame.hex())
+            evidence = ui.packet_evidence(0,directory)
+            self.assertFalse(evidence["ready"])
+            self.assertEqual(evidence["role_count"],0)
+            self.assertNotIn("password",json.dumps(evidence))
+            self.assertNotIn("HEX",json.dumps(evidence))
+        finally:
+            old.unlink(missing_ok=True)
+            current.unlink(missing_ok=True)
+            directory.rmdir()
+
+    def test_redacts_ocr_secrets_and_player_name(self):
+        obs=dict(items=[dict(text="secret",box=[[0,0]]*4,score=1),dict(text="登录游戏",box=[[0,0]]*4,score=1)],
+                 runtime={"player":{"name":"private"}})
+        safe=ui.safe_observation(obs)
+        self.assertNotIn("secret",json.dumps(safe))
+        self.assertNotIn("private",json.dumps(safe))
+        self.assertEqual(obs["runtime"]["player"]["name"],"private")
+        command = ui.safe_command(["shell", "input", "text", "CodexU"])
+        self.assertNotIn("CodexU", json.dumps(command))
+        self.assertIn("length=6", json.dumps(command))
+
+    def test_expired_observation_never_taps(self):
+        controller=ui.Controller.__new__(ui.Controller)
+        with self.assertRaisesRegex(ui.Blocked,"expired"):
+            controller.action({"captured":time.time()-60},["shell","input","tap","1","1"],"test")
+
+    def test_native_center_and_duplicate_target(self):
+        item=dict(text="确定",score=.99,box=[[100,200],[200,200],[200,240],[100,240]])
+        self.assertEqual(ui.center(item),[150,220])
+        controller=ui.Controller.__new__(ui.Controller)
+        with self.assertRaises(ui.Blocked):
+            controller.target({"items":[item,item]},"确定")
+
+
+if __name__ == "__main__":
+    unittest.main()

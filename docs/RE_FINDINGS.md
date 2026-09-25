@@ -280,3 +280,11 @@ and Apktool 3.0.3 into `%LOCALAPPDATA%/TruThan_RE_tools`; used Android Studio's
 - **Action**: Need to investigate the Python server start command in the batch script to fix input redirection for Windows environment.
 
 Status: `REJECTED` (Current test run result).
+
+## 2026-09-25: Real-client UI control and movement
+
+Status: `VERIFIED` for the observed bootstrap and movement path. A required fresh launch was followed by manual start-menu/login navigation; the visible role list had four empty slots, so one role was created. The client entered scene 9068. Runtime state and client cmd133 reports confirmed player 100001 moved from (180,230) to (180,258). A later client-only restart resumed the visible existing role without a second creation request. The reusable controller's `status`, `bootstrap`, and `move` commands were exercised; focused tests: 9 OK.
+
+`TEST OBJ1014` was not visible by screenshot/OCR in this client run. `runtime_state.json` reported `npcs=[]`, which only covers entities sent through this server's cmd132 probe path; this does not establish absence from unrendered map layers.
+
+Evidence: `docs/research/UI_CONTROL_TRACE.json`, `docs/research/UI_CONTROL_EXPLANATION.md`, sanitized screenshots in `docs/research/ui_control_images/`, and `docs/TRUTHAN_UI_CONTROL.md`. Credentials, player names, and packet payloads are excluded from retained evidence.

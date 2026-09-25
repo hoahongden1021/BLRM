@@ -1,0 +1,432 @@
+{
+    "trace_version":  2,
+    "session_date_utc":  "2026-09-25",
+    "credential_policy":  "Account values, character name, and raw packet payloads are omitted or redacted. Only sanitized screenshots and frame headers are retained.",
+    "tool_discovery":  {
+                           "jetbrains_specific_agent_tools":  [
+
+                                                              ],
+                           "image_viewer":  "functions.view_image (local files; used to inspect screenshots)",
+                           "screen_capture":  "tools/truthan_gui.py via ADB screencap",
+                           "ocr":  "tools/truthan_rapidocr.py / RapidOCR",
+                           "input":  "tools/truthan_gui.py and adb shell input",
+                           "inspection_note":  "No JetBrains-specific IDE tool was exposed in this agent session. Screens were not treated as visually inspected until shown with functions.view_image."
+                       },
+    "device":  {
+                   "package":  "com.t4game",
+                   "activity":  "j2ab.android.app.J2ABMIDletActivity",
+                   "screenshot_dimensions":  [
+                                                 2992,
+                                                 1344
+                                             ]
+               },
+    "fresh_runtime":  {
+                          "timestamp_utc":  "2026-09-25T06:11:21.114Z",
+                          "timestamp_source":  "Windows process start time for the launch-created server PID",
+                          "tool":  "exec_command",
+                          "command_sanitized":  "py tools/truthan_gui.py launch",
+                          "result":  "exit 0; local server truthan_local_server_v026.py PID 19424 started; ports 1888, 8089, 19000, 2888, 29000 listening; matching ADB reverse rules installed; com.t4game launched",
+                          "environment_overrides":  "none",
+                          "before":  "Fresh-launch procedure required; no pre-launch screen used as evidence",
+                          "after":  "START_MENU, confirmed in a fresh screenshot and OCR",
+                          "screenshot_dimensions":  [
+                                                        2992,
+                                                        1344
+                                                    ]
+                      },
+    "run_a_manual_full_client":  {
+                                     "purpose":  "One complete fresh real-client run. Action timestamps marked reconstructed are nearest-second estimates from adjacent OCR output; server packet and runtime timestamps are exact.",
+                                     "events":  [
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:11:44.942Z",
+                                                        "timestamp_basis":  "RapidOCR console timestamp",
+                                                        "tool":  "truthan_gui.py shot; truthan_rapidocr.py; functions.view_image",
+                                                        "arguments_sanitized":  "shot runtime/agent/screenshots/current_run.png; OCR current_run.png",
+                                                        "before":  "Fresh launch had completed",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "screen_before_action":  "START_MENU",
+                                                        "observation":  "Viewed the game start screen. OCR read the visible start, repair, and exit menu labels.",
+                                                        "coordinate_method":  "No action; visual inspection only",
+                                                        "after":  "START_MENU confirmed",
+                                                        "saved_screenshot":  null,
+                                                        "note":  "This transient manual-run capture was overwritten by later fresh captures; retained start-menu image from the later same-server resume is linked below."
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:12:02Z",
+                                                        "timestamp_basis":  "Reconstructed to nearest second from the immediately following 06:12:10 OCR capture; ADB dispatch itself did not timestamp its return",
+                                                        "tool":  "truthan_gui.py / ADB",
+                                                        "command_sanitized":  "adb shell input tap 2420 578",
+                                                        "before":  "START_MENU; fresh 2992x1344 screenshot showed the start-game label",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "center of the exact RapidOCR box in native screenshot pixels; no scaling",
+                                                        "after":  "ACCOUNT_LOGIN after wait and fresh screenshot",
+                                                        "retry":  "none",
+                                                        "server_evidence":  "Authentication request was later visible in the sanitized header timeline; no payload retained."
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:12:22Z",
+                                                        "timestamp_basis":  "Reconstructed to nearest second from the subsequent 06:12:29 fresh OCR capture",
+                                                        "tool":  "truthan_gui.py / ADB",
+                                                        "command_sanitized":  "adb shell input tap 1412 547",
+                                                        "before":  "ACCOUNT_LOGIN; saved account and masked password fields already populated. No credentials were typed.",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "center of the fresh OCR login-button box in native screenshot pixels",
+                                                        "after":  "Still ACCOUNT_LOGIN after wait; image visibly unchanged",
+                                                        "retry":  "first tap; did not assume ADB success meant login"
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:12:40Z",
+                                                        "timestamp_basis":  "Reconstructed; successful auth frame appeared at 06:12:53Z",
+                                                        "tool":  "truthan_ocr_tap.py / ADB",
+                                                        "command_sanitized":  "tap exact visible login label at fresh OCR center [1412,547]",
+                                                        "before":  "ACCOUNT_LOGIN remained on screen after the first tap",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "fresh OCR exact-label center, native pixels",
+                                                        "after":  "ROLE_LIST appeared after the login transition",
+                                                        "retry":  "second and final login tap",
+                                                        "server_evidence":  "cmd277 authentication exchange, frame headers only; response was accepted and the client advanced."
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:14:23Z",
+                                                        "timestamp_basis":  "Server log time for cmd18 role-list response; tap occurred immediately after the role list was inspected",
+                                                        "tool":  "truthan_gui.py / ADB",
+                                                        "command_sanitized":  "adb shell input tap 1334 279",
+                                                        "before":  "ROLE_LIST visibly showed four empty role slots, no populated character, and the first slot selected",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "center of first empty slot label from fresh OCR, native screenshot pixels",
+                                                        "after":  "Same ROLE_LIST after first tap; no form opened",
+                                                        "retry":  "first and only same-state selection retry after refreshed screenshot"
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:14:34Z",
+                                                        "timestamp_basis":  "Reconstructed from the adjacent fresh capture and later cmd18/cmd16 packet timestamps",
+                                                        "tool":  "truthan_gui.py / ADB",
+                                                        "command_sanitized":  "adb shell input tap 1334 279",
+                                                        "before":  "ROLE_LIST still showed four empty slots on fresh screenshot",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "same first-slot center re-derived from fresh OCR; native pixels",
+                                                        "after":  "CREATE_ROLE form appeared",
+                                                        "retry":  "second and final tap for this state"
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:14:44Z",
+                                                        "timestamp_basis":  "Reconstructed nearest second from command sequence",
+                                                        "tool":  "truthan_gui.py / ADB",
+                                                        "command_sanitized":  "adb shell input tap 1215 230",
+                                                        "before":  "CREATE_ROLE form; blank name field visible",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "center of blank field by live screenshot geometry, native pixels",
+                                                        "after":  "NAME_INPUT form appeared"
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:14:52Z",
+                                                        "timestamp_basis":  "Reconstructed nearest second from command sequence",
+                                                        "tool":  "truthan_gui.py / ADB",
+                                                        "command_sanitized":  "adb shell input tap 1400 120",
+                                                        "before":  "NAME_INPUT blank text box; confirm and return controls visible",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "center of text field, native pixels",
+                                                        "after":  "Android text keyboard appeared with a visible cursor"
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:14:56Z",
+                                                        "timestamp_basis":  "Reconstructed nearest second from command sequence",
+                                                        "tool":  "truthan_gui.py text / ADB",
+                                                        "command_sanitized":  "adb shell input text [REDACTED_TEXT length=6]",
+                                                        "before":  "Focused Android IME; blank field and cursor visibly confirmed",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "text entered through the focused Android input connection; no coordinate typing",
+                                                        "after":  "Six-character ASCII character name visibly appeared; the saved trace and screenshot redact it"
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:15:02Z",
+                                                        "timestamp_basis":  "Fresh RapidOCR exact label; command time reconstructed nearest second",
+                                                        "tool":  "truthan_gui.py / ADB",
+                                                        "command_sanitized":  "adb shell input tap 2837 636",
+                                                        "before":  "NAME_IME showed the entered name and DONE button",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "center of fresh OCR DONE box, native pixels",
+                                                        "after":  "Keyboard closed; name remained in the game name field"
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:15:10Z",
+                                                        "timestamp_basis":  "Fresh RapidOCR exact label; command time reconstructed nearest second",
+                                                        "tool":  "truthan_gui.py / ADB",
+                                                        "command_sanitized":  "adb shell input tap 1490 230",
+                                                        "before":  "NAME_INPUT showed the name and confirm control",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "center of fresh OCR confirm box, native pixels",
+                                                        "after":  "Returned to CREATE_ROLE form with the name populated"
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:16:46Z",
+                                                        "timestamp_basis":  "Exact server packet log time for the one cmd16 creation request/response",
+                                                        "tool":  "truthan_gui.py / ADB",
+                                                        "command_sanitized":  "adb shell input tap 2070 328",
+                                                        "before":  "CREATE_ROLE showed the populated name and one Create button",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "center of fresh OCR Create box, native pixels",
+                                                        "after":  "World HUD appeared; exactly one cmd16 request was logged",
+                                                        "retry":  "single create submission; no creation retry",
+                                                        "server_evidence":  "cmd16 request and response headers only; the client then issued cmd6 and received cmd7/cmd32."
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:16:47.274Z",
+                                                        "timestamp_basis":  "Exact runtime_state.json updated_unix_ms",
+                                                        "tool":  "truthan_state.py data read plus live screenshot inspection",
+                                                        "command_sanitized":  "read server/truthan_packet_logs/runtime_state.json; fresh ADB screenshot + RapidOCR",
+                                                        "before":  "ROLE_LIST had been empty; one role creation was accepted",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "after":  "IN_GAME visually observed; connected=true, scene_id=9068, player_id=100001, position=(180,230), position_source=server_scene_state",
+                                                        "server_packets":  "RX cmd6; TX cmd7 and cmd32; RX/TX cmd10. Headers only."
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:17:38Z",
+                                                        "timestamp_basis":  "Exact first cmd133 server-log timestamp; before-position state read from runtime_state.json",
+                                                        "tool":  "adb shell input touchscreen swipe",
+                                                        "command_sanitized":  "adb shell input touchscreen swipe 587 1179 587 1179 700",
+                                                        "before":  "IN_GAME HUD and fresh screenshot; player=(180,230), scene=9068",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "coordinate_method":  "visually inspected lower-left D-pad down arrow; stationary press at native pixel center (587,1179), held 700 ms",
+                                                        "after":  "Fresh screenshot showed the map/player after the press; player=(180,258), same id and scene; position_source=cmd133; updated_unix_ms=1790317059233",
+                                                        "verified":  true,
+                                                        "server_evidence":  "three RX cmd133 frames at 15:17:38-39 local time; raw frame bytes omitted."
+                                                    },
+                                                    {
+                                                        "timestamp_utc":  "2026-09-25T06:17:39.233Z",
+                                                        "timestamp_basis":  "Exact runtime_state.json updated_unix_ms",
+                                                        "tool":  "truthan_rapidocr.py and functions.view_image",
+                                                        "command_sanitized":  "OCR fresh post-move screenshot; inspect the current world image",
+                                                        "before":  "Post-move IN_GAME screen",
+                                                        "screenshot_dimensions":  [
+                                                                                      2992,
+                                                                                      1344
+                                                                                  ],
+                                                        "after":  "No TEST OBJ1014 label or numeric 1014 was visible in OCR or visual inspection. runtime_state.json reported npcs=[] (server-sent cmd132 probe entities only). Conclusion: TEST OBJ1014 was not visibly confirmed in the client during this run; this does not prove absence of every unrendered map object."
+                                                    }
+                                                ]
+                                 },
+    "run_b_controller_resume_same_server":  {
+                                                "purpose":  "Exercise safe resume after the full manual run, without restarting the local server or creating another role. Controller timestamps are exact from its JSONL trace.",
+                                                "events":  [
+                                                               {
+                                                                   "timestamp_utc":  "2026-09-25T06:25:12.715903Z",
+                                                                   "tool":  "truthan_ui_control.py bootstrap --restart-client",
+                                                                   "command_sanitized":  [
+                                                                                             "adb shell am force-stop com.t4game",
+                                                                                             "adb shell am start -n com.t4game/j2ab.android.app.J2ABMIDletActivity"
+                                                                                         ],
+                                                                   "before":  "Screen showed the world HUD after server idle timeout; runtime game_connected=false; server PID 19424 and its in-memory role were retained",
+                                                                   "screenshot_dimensions":  [
+                                                                                                 2992,
+                                                                                                 1344
+                                                                                             ],
+                                                                   "after":  "START_MENU; server not restarted"
+                                                               },
+                                                               {
+                                                                   "timestamp_utc":  "2026-09-25T06:25:22.732161Z",
+                                                                   "tool":  "truthan_ui_control.py / adb",
+                                                                   "command_sanitized":  "adb shell input tap 2420 578",
+                                                                   "before":  "START_MENU",
+                                                                   "screenshot":  "docs/research/ui_control_images/run_20260925_01_start_menu.png",
+                                                                   "screenshot_dimensions":  [
+                                                                                                 2992,
+                                                                                                 1344
+                                                                                             ],
+                                                                   "coordinate_method":  "fresh OCR exact-label center in native pixels",
+                                                                   "after":  "ACCOUNT_LOGIN"
+                                                               },
+                                                               {
+                                                                   "timestamp_utc":  "2026-09-25T06:25:37.388110Z",
+                                                                   "tool":  "truthan_ui_control.py / adb",
+                                                                   "command_sanitized":  "adb shell input tap 1412 547",
+                                                                   "before":  "ACCOUNT_LOGIN with existing saved credentials; no fields typed",
+                                                                   "screenshot":  "docs/research/ui_control_images/run_20260925_02_account_login.png",
+                                                                   "screenshot_dimensions":  [
+                                                                                                 2992,
+                                                                                                 1344
+                                                                                             ],
+                                                                   "coordinate_method":  "fresh OCR exact-label center in native pixels",
+                                                                   "after":  "ACCOUNT_LOGIN remained; first tap only"
+                                                               },
+                                                               {
+                                                                   "timestamp_utc":  "2026-09-25T06:25:51.844673Z",
+                                                                   "tool":  "truthan_ui_control.py / adb",
+                                                                   "command_sanitized":  "adb shell input tap 1412 547",
+                                                                   "before":  "ACCOUNT_LOGIN still visible after fresh capture",
+                                                                   "screenshot_dimensions":  [
+                                                                                                 2992,
+                                                                                                 1344
+                                                                                             ],
+                                                                   "coordinate_method":  "fresh OCR exact-label center in native pixels",
+                                                                   "after":  "ROLE_LIST; second and final tap. UI showed a populated role row and Enter Game control.",
+                                                                   "retry":  "second and final tap"
+                                                               },
+                                                               {
+                                                                   "timestamp_utc":  "2026-09-25T06:25:59.387498Z",
+                                                                   "tool":  "truthan_ui_control.py bootstrap",
+                                                                   "before":  "ROLE_LIST showed an existing character and Enter Game; the old p19000 connection still had stale role_count=0",
+                                                                   "screenshot":  "docs/research/ui_control_images/run_20260925_03_existing_role.png",
+                                                                   "screenshot_dimensions":  [
+                                                                                                 2992,
+                                                                                                 1344
+                                                                                             ],
+                                                                   "after":  "Controller safely blocked before any create action because role-count/UI evidence disagreed",
+                                                                   "fix":  "Treat visible Enter Game as positive existing-role UI evidence; creation still requires count=0, four empty slots, no Enter Game, and no creation ledger."
+                                                               },
+                                                               {
+                                                                   "timestamp_utc":  "2026-09-25T06:27:08.036903Z",
+                                                                   "tool":  "truthan_ui_control.py bootstrap",
+                                                                   "command_sanitized":  "adb shell input tap 2518 698",
+                                                                   "before":  "Fresh ROLE_LIST image showed one existing role and Enter Game; current packet response role_count=1",
+                                                                   "screenshot_dimensions":  [
+                                                                                                 2992,
+                                                                                                 1344
+                                                                                             ],
+                                                                   "coordinate_method":  "center of fresh OCR Enter Game box in native pixels",
+                                                                   "after":  "Entered world; runtime game_connected=true, scene=9068, player=(180,230); packet evidence became ready. OCR classifier initially said UNKNOWN because small HUD labels fell below confidence threshold. No create command occurred.",
+                                                                   "server_packets":  "RX cmd6; TX cmd7/cmd32; RX/TX cmd10."
+                                                               },
+                                                               {
+                                                                   "timestamp_utc":  "2026-09-25T06:29:21Z",
+                                                                   "timestamp_basis":  "status command trace created at 06:29:21 UTC",
+                                                                   "tool":  "truthan_ui_control.py status",
+                                                                   "before":  "Current world HUD, live client foreground",
+                                                                   "screenshot_dimensions":  [
+                                                                                                 2992,
+                                                                                                 1344
+                                                                                             ],
+                                                                   "after":  "WORLD_HUD and in_game=true after adding a second, consistently readable HUD label to the classifier."
+                                                               },
+                                                               {
+                                                                   "timestamp_utc":  "2026-09-25T06:29:34.226974Z",
+                                                                   "tool":  "truthan_ui_control.py bootstrap",
+                                                                   "before":  "Already in the verified world HUD with the same existing role",
+                                                                   "screenshot_dimensions":  [
+                                                                                                 2992,
+                                                                                                 1344
+                                                                                             ],
+                                                                   "after":  "BOOTSTRAP_PASS; no role creation action."
+                                                               },
+                                                               {
+                                                                   "timestamp_utc":  "2026-09-25T06:29:50.282371Z",
+                                                                   "tool":  "truthan_ui_control.py move --duration-ms 700",
+                                                                   "command_sanitized":  "adb shell input touchscreen swipe 589 1172 589 1172 700",
+                                                                   "before":  "WORLD_HUD; player=(180,230), scene=9068, connected=true; prior runtime updated_unix_ms=1790317628547 (state unchanged since role entry)",
+                                                                   "screenshot":  "docs/research/ui_control_images/run_20260925_05_before_move.png",
+                                                                   "screenshot_dimensions":  [
+                                                                                                 2992,
+                                                                                                 1344
+                                                                                             ],
+                                                                   "coordinate_method":  "fresh screenshot template match for D-pad down arrow; correlation score=1.0000; stationary 700 ms hold at native pixel center (589,1172)",
+                                                                   "after":  "player=(180,258), same player and scene; updated_unix_ms=1790317791061; position sourced from cmd133",
+                                                                   "after_screenshot":  "docs/research/ui_control_images/run_20260925_06_after_move.png",
+                                                                   "verified":  true,
+                                                                   "result_timestamp_utc":  "2026-09-25T06:29:58.621394Z",
+                                                                   "server_packets":  "Current p19000 session had login cmd277/cmd20, map cmd6/TX7/TX32, cmd10 exchange, and fresh RX cmd133 after move. Header-only evidence; payloads omitted."
+                                                               }
+                                                           ]
+                                            },
+    "retained_sanitized_screenshots":  [
+                                           {
+                                               "path":  "docs/research/ui_control_images/run_20260925_01_start_menu.png",
+                                               "dimensions":  [
+                                                                  2992,
+                                                                  1344
+                                                              ],
+                                               "source_trace":  "runtime/agent/ui_control/20260925T062512_715580Z/001.png"
+                                           },
+                                           {
+                                               "path":  "docs/research/ui_control_images/run_20260925_02_account_login.png",
+                                               "dimensions":  [
+                                                                  2992,
+                                                                  1344
+                                                              ],
+                                               "source_trace":  "runtime/agent/ui_control/20260925T062512_715580Z/002.png",
+                                               "redaction":  "account/password values masked"
+                                           },
+                                           {
+                                               "path":  "docs/research/ui_control_images/run_20260925_03_existing_role.png",
+                                               "dimensions":  [
+                                                                  2992,
+                                                                  1344
+                                                              ],
+                                               "source_trace":  "runtime/agent/ui_control/20260925T062512_715580Z/006.png",
+                                               "redaction":  "character name masked"
+                                           },
+                                           {
+                                               "path":  "docs/research/ui_control_images/run_20260925_04_entered_world.png",
+                                               "dimensions":  [
+                                                                  2992,
+                                                                  1344
+                                                              ],
+                                               "source_trace":  "runtime/agent/ui_control/20260925T062704_511955Z/002.png",
+                                               "redaction":  "player name and unidentified text masked"
+                                           },
+                                           {
+                                               "path":  "docs/research/ui_control_images/run_20260925_05_before_move.png",
+                                               "dimensions":  [
+                                                                  2992,
+                                                                  1344
+                                                              ],
+                                               "source_trace":  "runtime/agent/ui_control/20260925T062946_289977Z/001.png",
+                                               "redaction":  "player name and unidentified text masked"
+                                           },
+                                           {
+                                               "path":  "docs/research/ui_control_images/run_20260925_06_after_move.png",
+                                               "dimensions":  [
+                                                                  2992,
+                                                                  1344
+                                                              ],
+                                               "source_trace":  "runtime/agent/ui_control/20260925T062946_289977Z/002.png",
+                                               "redaction":  "player name and unidentified text masked"
+                                           }
+                                       ],
+    "evidence_limits":  [
+                            "Initial manual action timestamps are nearest-second reconstructions; exact server packet/runtime timestamps are stated separately.",
+                            "The saved screenshot set for start/login/role is from the later same-server safe-resume pass; the original first-run transient captures were overwritten.",
+                            "No raw packet payloads or login credentials are included."
+                        ]
+}
