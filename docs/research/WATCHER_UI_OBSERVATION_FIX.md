@@ -36,6 +36,16 @@ launched. Watcher command `py tools\truthan_screen_watch.py start` — passed
 the latest decoded frame was 146. The age gap is why the controller did not
 use that OCR state for a tap.
 
+The live controller harness ran `Controller.observe("watcher")`, required
+`START_MENU`, selected the highest-screen `LABELS` target with confidence at
+least 0.95, and invoked `tap_label` once. The first two harness attempts
+refused before input with `Observation expired`; the traces show watcher
+freshness fallback and then a stale ADB observation. No tap was sent in either
+attempt. The demonstrated delays prompted moving packet/runtime evidence
+collection ahead of ADB capture, saving watcher frame bytes without resize,
+refreshing stale label observations, and checking freshness again immediately
+before input. The third harness run issued the single tap documented below.
+
 One safe UI action was issued from `START_MENU` using the controller's watcher
 observation path. The watcher result failed the existing freshness check, so
 the controller fell back to fresh ADB screenshot/OCR and re-resolved the
@@ -77,3 +87,9 @@ py tools\truthan_screen_watch.py status --brief
 py -m py_compile tools\truthan_screen_watch.py tools\truthan_ui_control.py
 py -m unittest tests.test_truthan_ui_control
 ```
+
+The live action and screenshot comparison used inline `py -c` controller
+harnesses importing `truthan_ui_control`; the action harness required
+`START_MENU`, selected the highest-screen confident known control, called
+`tap_label` once, and printed pre/post evidence. The 10-minute stability soak
+was not repeated.
