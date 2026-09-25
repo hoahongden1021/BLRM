@@ -68,6 +68,15 @@ class ControllerTests(unittest.TestCase):
                 stdout='{"ProcessName":"python","CreationDate":"/Date(200000)/"}')):
             self.assertFalse(ui.session_alive(value))
 
+    def test_reuse_session_refuses_stale_runtime_without_starting_server(self):
+        with patch.object(ui, "session_alive", return_value=False), \
+             patch.object(ui, "start_session", side_effect=AssertionError("fresh server started")):
+            with self.assertRaisesRegex(ui.Blocked, "--reuse-session"):
+                ui.require_reusable_session({"server_pid": 1234})
+        live = {"server_pid": 1234}
+        with patch.object(ui, "session_alive", return_value=True):
+            self.assertIs(ui.require_reusable_session(live), live)
+
     def test_packet_connection_boundary_and_sanitization(self):
         directory = ROOT / "runtime/agent/ui_control_test_fixture"
         directory.mkdir(parents=True, exist_ok=True)
@@ -150,6 +159,31 @@ class ControllerTests(unittest.TestCase):
             self.assertIs(controller.observe(source="auto"),fallback)
         observe.assert_called_once_with(timeout=8.0,include_frame=True)
         adb_observe.assert_called_once_with()
+
+    def test_adb_only_controller_never_waits_on_watcher(self):
+        controller=ui.Controller.__new__(ui.Controller)
+        controller.adb_only=True
+        result={"source":"adb"}
+        with patch.object(controller,"observe_adb",return_value=result) as adb_observe, \
+             patch("truthan_screen_watch.watcher_observe",side_effect=AssertionError("watcher used")):
+            self.assertIs(controller.observe(),result)
+        adb_observe.assert_called_once_with()
+
+    def test_bootstrap_no_create_stops_before_role_creation_action(self):
+        controller=ui.Controller.__new__(ui.Controller)
+        controller.started=time.time()
+        observation={
+            "in_game":False,
+            "screen":"ROLE_LIST",
+            "items":[{"text":"\u521b\u5efa\u65b0\u89d2\u8272","score":.99} for _ in range(4)],
+            "packets":{"role_count":0,"headers":[]},
+        }
+        with patch.object(controller,"observe",return_value=observation), \
+             patch.object(controller,"record"), \
+             patch.object(controller,"tap_label") as tap_label, \
+             self.assertRaisesRegex(ui.Blocked,"--no-create"):
+            controller.bootstrap(allow_create=False)
+        tap_label.assert_not_called()
 
     def test_delayed_label_action_reobserves_and_recomputes_target(self):
         controller=ui.Controller.__new__(ui.Controller)

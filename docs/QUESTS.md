@@ -48,3 +48,18 @@ The exact quest ID, dialogue sequence, kill count, reward, and command numbers a
 9. reverse quest completion/reward.
 
 Do not build quest logic by guessing IDs or expected MMO behavior.
+
+## 2026-09-25: reconstructed NPC dialogue, no quest path yet
+
+The scene 9068 population includes configured local NPC greetings and a
+cmd120 function leading to a cmd73 dialogue. The Android readers support those
+response shapes, but a successful real-client interaction has not yet been
+captured. The dialogue text is reconstructed starter-area guidance, not
+recovered tutorial dialogue.
+
+Quest groups remain empty. No quest accept/deliver/progress path is implemented
+because the server-side request/response layout and real quest IDs are not
+supported by current local evidence. Monster targeting request cmd136 is
+PARTIAL from static source; a valid cmd137 result requires unresolved nested
+skill-effect and property records, so neither combat results nor quest progress
+are fabricated. Details: `docs/PROTOCOL.md`.

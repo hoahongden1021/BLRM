@@ -168,9 +168,10 @@ def safe_observation(obs):
 
 
 class Controller:
-    def __init__(self, session):
+    def __init__(self, session, adb_only=False):
         self.session = session
         self.started = session["started"]
+        self.adb_only = adb_only
         self.directory = HOME / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
         self.directory.mkdir(parents=True)
         self.trace = self.directory / "trace.jsonl"
@@ -184,11 +185,10 @@ class Controller:
 
     def observe(self, source="auto"):
         """Prefer a fresh watcher OCR frame; retain the proven ADB OCR fallback."""
+        if source == "adb" or getattr(self, "adb_only", False):
+            return self.observe_adb()
         from truthan_screen_watch import WatchError, watcher_observe
         from PIL import Image
-
-        if source == "adb":
-            return self.observe_adb()
 
         focus = gui.current_focus()
         if not focus["truthan_foreground"]:
@@ -371,7 +371,7 @@ class Controller:
             raise Blocked("Uncalibrated dimensions; need a new real-client calibration")
         return self.tap(obs, xy, "Native 2992x1344 field geometry verified in UI_CONTROL_TRACE.json")
 
-    def bootstrap(self, name="CodexU"):
+    def bootstrap(self, name="CodexU", allow_create=True):
         attempts = {}
         obs = self.observe()
         name_confirmed = False
@@ -408,6 +408,8 @@ class Controller:
                     save_json(LEDGER, {"existing_role_observed": True})
                     obs = self.tap_label(obs, "进入游戏")
                 else:
+                    if not allow_create:
+                        raise Blocked("No existing role observed; --no-create forbids role creation")
                     obs = self.tap_label(obs, "创建新角色", first=True)
             elif state == "CREATE_ROLE":
                 if obs["packets"].get("create_sent"):
@@ -527,6 +529,12 @@ def start_session():
     return session
 
 
+def require_reusable_session(session):
+    if not session_alive(session):
+        raise Blocked("Saved runtime session is not alive; --reuse-session forbids starting a server")
+    return session
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -534,8 +542,15 @@ def main():
     observe = sub.add_parser("observe")
     observe.add_argument("--source", choices=("auto", "watcher", "adb"), default="auto")
     boot = sub.add_parser("bootstrap")
-    boot.add_argument("--fresh", action="store_true", help="Start a new runtime; server discards in-memory roles")
+    session_mode = boot.add_mutually_exclusive_group()
+    session_mode.add_argument("--fresh", action="store_true", help="Start a new runtime; server discards in-memory roles")
+    session_mode.add_argument("--reuse-session", action="store_true",
+                              help="Require the saved runtime process; never start or replace the server")
     boot.add_argument("--restart-client", action="store_true", help="Reconnect within the same fresh runtime session")
+    boot.add_argument("--adb-only", action="store_true",
+                      help="Use ordinary ADB screenshot + RapidOCR for bootstrap observations")
+    boot.add_argument("--no-create", action="store_true",
+                      help="Block role creation when no existing role is visible")
     boot.add_argument("--name", default="CodexU", help="1-6 ASCII letters/digits; used only for verified empty list")
     move = sub.add_parser("move")
     move.add_argument("--duration-ms", type=int, default=600)
@@ -547,11 +562,13 @@ def main():
     session = read_json(SESSION)
     if args.command == "observe":
         session = {"started": time.time()}
+    elif args.command == "bootstrap" and args.reuse_session:
+        session = require_reusable_session(session)
     elif args.command == "bootstrap" and (args.fresh or not session_alive(session)):
         session = start_session()
     elif not session_alive(session):
         raise Blocked("No matching fresh runtime session; run bootstrap first")
-    controller = Controller(session)
+    controller = Controller(session, adb_only=getattr(args, "adb_only", False))
     try:
         if args.command == "bootstrap":
             if args.restart_client:
@@ -561,7 +578,7 @@ def main():
                 controller.record(tool="truthan_gui.adb", command=["adb", *command])
                 gui.adb(*command)
                 time.sleep(5)
-            result = controller.bootstrap(args.name)
+            result = controller.bootstrap(args.name, allow_create=not args.no_create)
         elif args.command == "move":
             result = controller.move(args.duration_ms)
         elif args.command == "observe":

@@ -587,4 +587,43 @@ claiming 28 KB chunks make every APK resource safe is not established for
 total sizes above 32767. This pass changes only datatype routing; large-resource
 transfer behavior remains PARTIAL and needs a separate evidence-backed test.
 
+## 2026-09-25: reconstructed scene population and NPC interaction
+
+Scene 9068 population is loaded from `server/scene_population_9068.json` only
+when `TRUTHAN_DATA_SPAWN=1`; the default-off path emits no population. The server
+checks each configured coordinate against `server/scene_walkability_9068.json`
+and sends cmd132 records after replying to the client's cmd10 scene-ready
+request. This stage is a source/code and real-socket integration-test result;
+client visibility and interaction still require visual runtime evidence.
+
+Client source evidence (`GameWorld.java`):
+
+- `sendGetNpcMissionListMessage(int)` writes one NPC runtime i32 and sends cmd120
+  (`:18714`); `sendNpcFunctionTalkMessage()` writes the selected NPC runtime i32
+  and sends cmd73 (`:19519`). Each request body is therefore four bytes.
+- `processNpcFunctionListMessage()` (`:8514`) reads a greeting string, four
+  quest-group signed-byte counts with group-specific records, then a signed-byte
+  function count and records `(flagId i8, function i16, label string)`.
+- `processNpcFunctionTalkMessage()` (`:8676`) reads status i8; nonzero is error.
+  Success reads count i8 followed by title/text string pairs.
+- Server cmd120/cmd73 replies currently implement only empty quest groups and a
+  single data-configured talk function/dialogue. **No quest accept/deliver rows
+  are implemented.** The client has not yet confirmed these configured replies.
+
+Combat investigation (`GameWorld.java`): `sendAttackMessage()` (`:13429`)
+serializes cmd136 as target ID i32, target type i8, target X/Y i16, player
+action type/action/direction i8 each, skill ID i16, player X/Y i16, speed i8
+(18-byte body). `processSpriteSkillResultMessage()` (`:11411`, dispatched for
+cmd137) reads a flags byte, source ID/type, target ID/type, a short, movement
+mode and optional XY shorts, two i32 values, two bytes, three skill-effect
+records, then entity property updates. The nested effect/property record
+formats and a captured valid cmd137 outcome are not available here. No cmd137
+response or damage is fabricated; this is the exact blocker to a playable
+server-side attack response. Status: request layout PARTIAL (static client
+source), server combat result UNKNOWN.
+
+The socket receive loop now uses a 60-second poll timeout and continues after
+each `socket.timeout`; it does not close an otherwise-live idle map connection
+at 300 seconds. Runtime soak evidence for this change is not yet available.
+
 ---

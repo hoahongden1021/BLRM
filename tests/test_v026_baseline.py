@@ -2,6 +2,7 @@ import unittest
 import struct
 import sys
 import ast
+import json
 from pathlib import Path
 
 # --- STEP 1 & 2: AST LOADER ---
@@ -38,14 +39,14 @@ def load_ast_helpers():
         'MAGIC', 'mkframe', 'parse_frames', 'decode_client_move133',
         'parse_update_resource_request', 'resource_chunk_bodies',
         'missing_resource_clear_body', 'pstr', 'npc_view_body',
-        'data_spawn_entities',
+        'data_spawn_entities', 'load_scene_population', 'scene_cell_block',
+        '_validated_probe_entity', 'npc_function_list_body', 'npc_talk_body',
     ]
 
     selected_nodes = []
 
     # Walk the AST to find specific definitions / module-level assignments.
-    # DATA_SPAWN / DATA_SPAWN_FIXTURES are injected below (fixture assign would
-    # work, but DATA_SPAWN reads os.environ which this loader does not import).
+    # DATA_SPAWN is injected below; environment setup is intentionally excluded.
     assign_ok = {'MAGIC'}
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign) and node.targets:
@@ -63,12 +64,14 @@ def load_ast_helpers():
     scope = {
         "__builtins__": __builtins__,
         "struct": struct,
+        "json": json,
+        "pathlib": __import__("pathlib"),
         "Path": Path,
-        # data_spawn_entities path (switch-off must not need ROLE/os)
+        "SCENE_POPULATION_PATH": SERVER_PATH.with_name("scene_population_9068.json"),
+        "SCENE_WALKABILITY_PATH": SERVER_PATH.with_name("scene_walkability_9068.json"),
         "DATA_SPAWN": False,
-        "DATA_SPAWN_FIXTURES": (),
         "current_scene_id": lambda: 9068,
-        "_validated_probe_entity": lambda **kw: dict(kw),
+        "verify_probe_object": lambda object_data_id: [],
     }
 
     # Execute the module to define the required names in scope
@@ -92,9 +95,10 @@ try:
         "MAGIC", "mkframe", "parse_frames", "decode_client_move133",
         "parse_update_resource_request", "resource_chunk_bodies",
         "missing_resource_clear_body", "pstr", "npc_view_body",
-        "data_spawn_entities", "DATA_SPAWN", "DATA_SPAWN_FIXTURES",
+        "data_spawn_entities", "load_scene_population", "scene_cell_block",
+        "_validated_probe_entity", "DATA_SPAWN",
     ]
-    # DATA_SPAWN* are injected defaults, not AST-loaded (see loader comments).
+    # DATA_SPAWN is an injected default (see loader comments).
 
     found_helpers = []
     for name in helpers:
@@ -417,37 +421,75 @@ class TestV026Baseline(unittest.TestCase):
                 can_select=1,
             )
 
-    # 13. DATA-DRIVEN SPAWN SWITCH — OFF must stay empty / ON uses fixtures
+    # 13. Data population, decoded-scene validation and switch-off behavior.
     def test_data_spawn_switch_off_returns_empty(self):
         server_scope["DATA_SPAWN"] = False
-        server_scope["DATA_SPAWN_FIXTURES"] = (
-            {"label": "TEST", "name": "TEST OBJ1014", "object_data_id": 1014},
-        )
         self.assertEqual(server_scope["data_spawn_entities"](), [])
 
-    def test_data_spawn_switch_on_uses_test_fixture_first(self):
+    def test_data_spawn_on_loads_full_reconstructed_population(self):
         server_scope["DATA_SPAWN"] = True
-        server_scope["DATA_SPAWN_FIXTURES"] = (
-            {
-                "label": "TEST",
-                "sprite_id": 220010,
-                "name": "TEST OBJ1014",
-                "object_data_id": 1014,
-                "x": 203,
-                "y": 253,
-                "flags": bytes([3]),
-            },
-        )
         server_scope["current_scene_id"] = lambda: 9068
         ents = server_scope["data_spawn_entities"]()
-        self.assertEqual(len(ents), 1)
-        self.assertEqual(ents[0]["name"], "TEST OBJ1014")
-        self.assertEqual(ents[0]["object_data_id"], 1014)
-        self.assertNotIn("label", ents[0])
+        self.assertEqual(len(ents), 5)
+        self.assertEqual(sum(ent["kind"] == "npc" for ent in ents), 3)
+        self.assertEqual(sum(ent["kind"] == "monster" for ent in ents), 2)
+        self.assertTrue(all(ent["flags"] == b"" for ent in ents))
+        self.assertEqual([ent["object_data_id"] for ent in ents],
+                         [1014, 1015, 1016, 1155, 2077])
+        self.assertEqual([ent["reference_model_id"] for ent in ents[:4]],
+                         ["n420001", "n420003", "n420004", "m510103"])
+
+    def test_scene_grid_accepts_verified_walkable_and_rejects_blocked(self):
+        self.assertEqual(server_scope["scene_cell_block"](170, 232), 0)
+        self.assertNotEqual(server_scope["scene_cell_block"](10, 8), 0)
+
+    def test_population_loader_rejects_malformed_json_asset(self):
+        from pathlib import Path
+        bad_path = Path(__file__).with_name("_malformed_population_test.json")
+        try:
+            bad_path.write_text("{", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                server_scope["load_scene_population"](bad_path)
+        finally:
+                bad_path.unlink(missing_ok=True)
+
+    def test_population_loader_checks_scene_key_against_asset(self):
+        with self.assertRaisesRegex(ValueError, "scene 7000"):
+            server_scope["load_scene_population"](
+                server_scope["SCENE_POPULATION_PATH"], scene_id=7000,
+            )
+
+    def test_walkability_loader_rejects_malformed_asset(self):
+        from pathlib import Path
+        bad_path = Path(__file__).with_name("_malformed_walkability_test.json")
+        try:
+            bad_path.write_text("[]", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "malformed decoded walkability"):
+                server_scope["scene_cell_block"](170, 232, bad_path)
+        finally:
+            bad_path.unlink(missing_ok=True)
+
+    def test_population_rejects_position_outside_walkable_subset(self):
+        server_scope["current_scene_id"] = lambda: 9068
+        entry = dict(
+            kind="npc", provenance="RECONSTRUCTED test", object_data_id=1014,
+            x=10, y=8, interaction={},
+        )
+        with self.assertRaisesRegex(ValueError, "walkable block-0"):
+            server_scope["_validated_probe_entity"](**entry)
+
+    def test_cmd120_and_cmd73_encoders_match_reader_shapes(self):
+        function_list = server_scope["npc_function_list_body"](
+            "Guide", ((0, 7, "Talk"),),
+        )
+        self.assertEqual(function_list,
+                         b"\x00\x05Guide\x00\x00\x00\x00\x01\x00\x00\x07\x00\x04Talk")
+        talk = server_scope["npc_talk_body"]((("Title", "Text"),))
+        self.assertEqual(talk,
+                         b"\x00\x01\x00\x05Title\x00\x04Text")
 
     def test_data_spawn_switch_on_wrong_scene_raises(self):
         server_scope["DATA_SPAWN"] = True
-        server_scope["DATA_SPAWN_FIXTURES"] = ({"name": "TEST"},)
         server_scope["current_scene_id"] = lambda: 7000
         with self.assertRaises(ValueError):
             server_scope["data_spawn_entities"]()

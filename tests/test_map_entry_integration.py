@@ -35,6 +35,10 @@ ENTER_SCENE_READY = 10
 GET_ROLE_LIST = 20
 SPRITE_VIEW_MESSAGE = 132
 SPRITE_MOVE_MESSAGE = 133
+NPC_FUNCTION_LIST = 120
+NPC_FUNCTION_TALK = 73
+TEST_PORT_OFFSET = 20000
+TEST_GAME_PORT = 19000 + TEST_PORT_OFFSET
 
 
 def mkclient_frame(cmd, body=b"", sid=0, sess=0, fe=False):
@@ -56,14 +60,15 @@ def parse_all(buf: bytes):
             i += 1
             continue
         ln = struct.unpack_from(">H", buf, i + 2)[0]
-        if ln < 9 or i + ln > len(buf):
+        total = 2 + ln
+        if ln < 9 or i + total > len(buf):
             break
         sid = buf[i + 4]
         sess = struct.unpack_from(">I", buf, i + 5)[0]
         cmd = struct.unpack_from(">h", buf, i + 9)[0]
-        body = buf[i + 11:i + ln]
-        out.append((sid, sess, cmd, body, buf[i:i + ln]))
-        i += ln
+        body = buf[i + 11:i + total]
+        out.append((sid, sess, cmd, body, buf[i:i + total]))
+        i += total
     return out, buf[i:]
 
 
@@ -89,9 +94,41 @@ def recv_until(sock: socket.socket, want_cmds, timeout=5.0):
     return found
 
 
+def recv_count(sock: socket.socket, want_cmd: int, count: int, timeout=10.0):
+    """Collect a known number of repeated records without waiting for later actions."""
+    sock.settimeout(timeout)
+    buf = bytearray()
+    deadline = time.time() + timeout
+    found = {}
+    while time.time() < deadline:
+        try:
+            chunk = sock.recv(65535)
+        except socket.timeout:
+            break
+        if not chunk:
+            break
+        buf.extend(chunk)
+        frames, rest = parse_all(bytes(buf))
+        buf = bytearray(rest)
+        for frame in frames:
+            found.setdefault(frame[2], []).append(frame)
+        if len(found.get(want_cmd, ())) >= count:
+            return found
+    return found
+
+
 def start_server(data_spawn: int) -> subprocess.Popen:
     env = os.environ.copy()
+    # Isolate each integration case from operator-level probe toggles.
+    for key in (
+        "TRUTHAN_EXPERIMENTAL_SPAWN", "TRUTHAN_NPC_ASSET_PROBE",
+        "TRUTHAN_SINGLE_NPC_PROBE", "TRUTHAN_MOB_ASSET_PROBE",
+        "TRUTHAN_CAIYUN_OBJ", "TRUTHAN_HUOHUYAO_OBJ",
+    ):
+        env.pop(key, None)
     env["TRUTHAN_DATA_SPAWN"] = str(data_spawn)
+    # Keep the integration server isolated from an operator's live Android server.
+    env["TRUTHAN_PORT_OFFSET"] = str(TEST_PORT_OFFSET)
     env["TRUTHAN_SCENE"] = "9068"
     env["TRUTHAN_STATE_FILE"] = str(
         ROOT / "server" / "truthan_packet_logs" / f"itest_state_{data_spawn}.json"
@@ -103,11 +140,8 @@ def start_server(data_spawn: int) -> subprocess.Popen:
         [sys.executable, "-u", str(SERVER)],
         cwd=str(ROOT / "server"),
         env=env,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     # Wait for 19000
     for _ in range(80):
@@ -115,13 +149,13 @@ def start_server(data_spawn: int) -> subprocess.Popen:
             out = proc.stdout.read() if proc.stdout else ""
             raise RuntimeError(f"server exited early: {out}")
         try:
-            with socket.create_connection(("127.0.0.1", 19000), timeout=0.2):
+            with socket.create_connection(("127.0.0.1", TEST_GAME_PORT), timeout=0.2):
                 break
         except OSError:
             time.sleep(0.1)
     else:
         proc.kill()
-        raise RuntimeError("server 19000 never opened")
+        raise RuntimeError(f"test server {TEST_GAME_PORT} never opened")
     return proc
 
 
@@ -133,17 +167,12 @@ def stop_server(proc: subprocess.Popen):
         except subprocess.TimeoutExpired:
             proc.kill()
             proc.wait(timeout=5)
-    if proc.stdout:
-        try:
-            proc.stdout.close()
-        except OSError:
-            pass
 
 
 def run_map_entry_flow(data_spawn: int) -> dict:
     proc = start_server(data_spawn)
     try:
-        with socket.create_connection(("127.0.0.1", 19000), timeout=3) as s:
+        with socket.create_connection(("127.0.0.1", TEST_GAME_PORT), timeout=3) as s:
             s.settimeout(3)
             # LOGIN 277
             s.sendall(mkclient_frame(LOGIN_GAME, fe=True))
@@ -167,10 +196,17 @@ def run_map_entry_flow(data_spawn: int) -> dict:
             # ENTER_SCENE_READY 10 -> triggers send_starter_probe_entities
             s.sendall(mkclient_frame(ENTER_SCENE_READY))
             # Collect anything that arrives, including cmd132
-            after_ready = recv_until(
-                s, [ENTER_SCENE_READY, SPRITE_VIEW_MESSAGE, SPRITE_MOVE_MESSAGE],
-                timeout=6,
+            after_ready = recv_until(s, [ENTER_SCENE_READY], timeout=6)
+            population = (
+                recv_count(s, SPRITE_VIEW_MESSAGE, 5, timeout=15)
+                if data_spawn else {}
             )
+            after_ready.update(population)
+
+            s.sendall(mkclient_frame(NPC_FUNCTION_LIST, struct.pack(">i", 230010)))
+            after_npc_list = recv_until(s, [NPC_FUNCTION_LIST], timeout=10)
+            s.sendall(mkclient_frame(NPC_FUNCTION_TALK, struct.pack(">i", 230010)))
+            after_npc_talk = recv_until(s, [NPC_FUNCTION_TALK], timeout=10)
 
             # movement still accepted (no echo required)
             wx, wy = 180, 230
@@ -188,6 +224,8 @@ def run_map_entry_flow(data_spawn: int) -> dict:
                 ROLE_ENTER_SCENE: after_join.get(ROLE_ENTER_SCENE),
                 ENTER_SCENE_READY: after_ready.get(ENTER_SCENE_READY),
                 SPRITE_VIEW_MESSAGE: after_ready.get(SPRITE_VIEW_MESSAGE, []),
+                NPC_FUNCTION_LIST: after_npc_list.get(NPC_FUNCTION_LIST),
+                NPC_FUNCTION_TALK: after_npc_talk.get(NPC_FUNCTION_TALK),
             }
             return cmds_seen
     finally:
@@ -197,18 +235,10 @@ def run_map_entry_flow(data_spawn: int) -> dict:
 class TestMapEntrySendPath(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Kill any leftover local server that would steal port 19000.
-        import subprocess
-        subprocess.run(
-            ["powershell", "-NoProfile", "-Command",
-             "Get-CimInstance Win32_Process -Filter \"Name like 'python%'\" | "
-             "Where-Object { $_.CommandLine -match 'truthan_local_server_v026' } | "
-             "ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"],
-            capture_output=True, timeout=30,
-        )
-        time.sleep(0.5)
+        # Isolated integration ports mean no operator process needs to stop.
+        return
 
-    def test_data_spawn_on_emits_cmd132_test_obj1014(self):
+    def test_data_spawn_on_emits_cmd132_starter_population(self):
         cmds = run_map_entry_flow(1)
         # login / join / scene must work
         self.assertIsNotNone(cmds[LOGIN_GAME], "login cmd277 missing")
@@ -217,18 +247,33 @@ class TestMapEntrySendPath(unittest.TestCase):
         self.assertEqual(cmds[JOIN_GAME_RSP][0][3][0], 0, "join result success")
         self.assertIsNotNone(cmds[ROLE_ENTER_SCENE], "scene load cmd32 missing")
         self.assertIsNotNone(cmds[ENTER_SCENE_READY], "cmd10 ready missing")
+        self.assertIsNotNone(cmds[NPC_FUNCTION_LIST], "cmd120 function list missing")
+        function_body = cmds[NPC_FUNCTION_LIST][0][3]
+        greeting_len = struct.unpack(">H", function_body[:2])[0]
+        greeting = function_body[2:2 + greeting_len]
+        group_pos = 2 + greeting_len
+        self.assertEqual(greeting, b"Local reconstructed guide. Original NPC identity and quest data are unknown.")
+        self.assertEqual(function_body[group_pos:group_pos + 4], bytes(4))
+        self.assertEqual(function_body[group_pos + 4], 1, "one Talk function")
+        self.assertIsNotNone(cmds[NPC_FUNCTION_TALK], "cmd73 talk response missing")
+        talk_body = cmds[NPC_FUNCTION_TALK][0][3]
+        self.assertEqual(talk_body[:2], bytes([0, 1]), "success and one dialogue topic")
+        title_len = struct.unpack(">H", talk_body[2:4])[0]
+        title_end = 4 + title_len
+        text_len = struct.unpack(">H", talk_body[title_end:title_end + 2])[0]
+        text = talk_body[title_end + 2:title_end + 2 + text_len]
+        self.assertEqual(text, b"You are in the reconstructed starter area. Explore nearby creatures; original tutorial objectives are not yet recovered.")
 
         frames = cmds[SPRITE_VIEW_MESSAGE]
         self.assertTrue(frames, "TRUTHAN_DATA_SPAWN=1 must emit cmd132")
-        # Find TEST OBJ1014 (sprite 220010) and RECONSTRUCTED OBJ1155 (220011)
-        found_npc = None
-        found_monster = None
+        self.assertEqual(len(frames), 5, "scene population has five configured entities")
+        found = {}
         for sid, sess, cmd, body, wire in frames:
             if cmd != SPRITE_VIEW_MESSAGE or len(body) < 35:
                 continue
             sprite_id = struct.unpack(">i", body[0:4])[0]
-            if sprite_id not in (220010, 220011):
-                continue
+            if sprite_id not in (230010, 230011, 230012, 230110, 230111):
+                self.fail(f"unexpected population sprite id {sprite_id}")
             self.assertEqual(body[4], 2, "spriteType GNPC")
             x, y = struct.unpack(">hh", body[8:12])
             name_len = struct.unpack(">H", body[33:35])[0]
@@ -245,39 +290,12 @@ class TestMapEntrySendPath(unittest.TestCase):
             speed = body[p]; p += 1
             level = body[p]; p += 1
             object_data_id = struct.unpack(">h", body[p:p + 2])[0]
-            if sprite_id == 220010:
-                self.assertEqual((x, y), (203, 253))
-                self.assertEqual(object_data_id, 1014)
-                found_npc = (sprite_id, x, y, object_data_id)
-            else:
-                # RECONSTRUCTED monster: assets VERIFIED, position walkable,
-                # identity vs original spawn UNKNOWN.
-                self.assertEqual((x, y), (196, 238))
-                self.assertEqual(object_data_id, 1155)
-                found_monster = (sprite_id, x, y, object_data_id)
-        self.assertIsNotNone(found_npc, "TEST OBJ1014 sprite 220010 not in cmd132")
-        self.assertIsNotNone(
-            found_monster, "TEST OBJ1155 sprite 220011 not in cmd132"
-        )
-        # canHit is in the fixed header: byte 16 of body (after auto/init at 12-13)
-        # Layout from VERIFIED encoder: ... can* 14..16, hp 17..
-        # Actually verify canHit via known offsets: body[15] is canSelect? Use
-        # encoder-known field: after xy(8-11) auto/init(12-13) can*(14-16).
-        # Safer: re-parse the monster body for canHit from the verified layout.
-        mon_body = None
-        for sid, sess, cmd, body, wire in frames:
-            if cmd == SPRITE_VIEW_MESSAGE and len(body) >= 35:
-                if struct.unpack(">i", body[0:4])[0] == 220011:
-                    mon_body = body
-                    break
-        self.assertIsNotNone(mon_body, "monster body missing for canHit check")
-        # From npc_view_body / VERIFIED layout: header 0..7, xy 8..11,
-        # auto 12, init 13, can_select 14, can_hit 15 (i8 each after xy).
-        # Confirm against encoder: send path uses same layout as run112928.
-        # body[14] can_select, body[15] can_hit for GNPC without horse/buff.
-        self.assertEqual(mon_body[14], 1, "monster can_select")
-        self.assertEqual(mon_body[15], 1, "monster can_hit")
-        print("INTEGRATION_ON_OK", found_npc, found_monster)
+            self.assertEqual(body[14], 1, "all population entities selectable")
+            expected_hit = 1 if sprite_id >= 230110 else 0
+            self.assertEqual(body[15], expected_hit, "kind-specific hit flag")
+            found[sprite_id] = (x, y, object_data_id)
+        self.assertEqual(set(found), {230010, 230011, 230012, 230110, 230111})
+        print("INTEGRATION_ON_OK", found)
 
     def test_data_spawn_off_emits_no_cmd132(self):
         cmds = run_map_entry_flow(0)

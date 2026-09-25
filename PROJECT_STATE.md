@@ -175,3 +175,35 @@ The `02_test_npc_probe.bat` script failed to start the server due to an `Input r
 Reference evidence remains the run `112928` results.
 
 Next action: Fix the Python server startup command in `02_test_npc_probe.bat` to handle Windows environment redirection properly, then rerun the test.
+
+## 2026-09-25 continuation: scene 9068 content (PARTIAL; source and tests complete)
+
+- `docs/research/SCENE_9068_ENTITY_PROVENANCE.md` records the concrete TTpc /
+  BLRM-local-inputs comparison. Targeted TTpc loaders and inventory expose
+  ModelID language rows and map remapping, but no map-to-entity or spawn-XY
+  records. The reference names/text remain REVIVED_REFERENCE; client object
+  assignments, positions, and stats are RECONSTRUCTED. APK asset chains and
+  decoded walkability are independently VERIFIED.
+- `server/scene_population_9068.json` defines three NPCs and two monsters.
+  The opt-in data loader validates object assets and decoded block-0 walkability;
+  cmd132 records are sent after the cmd10 scene-ready response. Population is
+  off by default. Configured NPCs answer the statically supported cmd120/cmd73
+  flow. No quest groups or quest IDs are invented.
+- Focused tests passed: `tests.test_map_entry_integration` (2 tests),
+  `tests.test_v026_baseline` and `tests.test_truthan_ui_control` (46 tests;
+  48 tests total).
+  This includes malformed asset handling, switch-off behavior, packet layout,
+  and the local NPC interaction socket flow.
+- cmd136's monster request is statically decoded; cmd137's response remains
+  blocked by unresolved nested skill-effect/property records. No combat result
+  packet is fabricated.
+- Map sockets poll every 60 seconds and continue after idle socket timeouts;
+  extended idle runtime behavior is not yet tested.
+- `tools/truthan_ui_control.py bootstrap --adb-only` captures with ADB +
+  RapidOCR while retaining freshness and post-action checks. The screen watcher
+  is stopped. Its guarded `--reuse-session --no-create` attempt reached ROLE_LIST
+  after one login exchange and observed server `cmd=20` role_count=0; it sent no
+  create request and stopped. There was no existing role to reuse, so populated-
+  scene entry, movement, NPC selection, dialogue, and published screenshots
+  remain unverified. Do not retry login, create a role, or restart the server
+  under this session's constraints.

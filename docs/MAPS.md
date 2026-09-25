@@ -110,4 +110,19 @@ have grid positions. Original tutorial NPC/mob spawn XY remains `UNKNOWN`
 Evidence: APK `data/scn/9068.scn`, `build/research/jadx/sources/com/t4game/GScene.java`
 (`init:1513`, `readMapData:316`, `canCross:711`, `getGridBlock:1443`),
 `GSceneBackLayer.java`, `GDoodadObject.java`, `GTransferArea.java`,
-`GTileAnimData.java`, `GUtil.java:23–24` (`BYTEMASK`/`HITMASK`).
+`GTileAnimData.java`, `GUtil.java:23-24` (`BYTEMASK`/`HITMASK`).
+
+## 2026-09-25: data-driven playable starter population
+
+`server/scene_population_9068.json` configures three selectable NPCs and two
+selectable/hittable monsters. All five positions are `RECONSTRUCTED`; the
+server accepts only points in the conservative block-0 walkable subset from
+`server/scene_walkability_9068.json`. The population switch is
+`TRUTHAN_DATA_SPAWN` (default OFF). cmd132 is sent only after the cmd10 reply.
+These coordinates are not claims about the original Android server.
+
+Provenance: Original Android 1.17 APK scene bytes provide grid geometry and
+collision decoding; original APK object/image assets support the numeric asset
+chains. TTpc language tables and the BLRM-local-inputs revived APK were checked
+as references, but their available files do not join names/ModelIDs to Android
+object IDs or spawn coordinates. See `docs/research/MODELID_MAP_SPAWN_JOIN.md`.

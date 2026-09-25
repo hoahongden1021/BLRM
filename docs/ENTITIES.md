@@ -1,5 +1,25 @@
 # Entities / NPC / Mob Notes
 
+## Current scene 9068 population (2026-09-25)
+
+The earlier single-NPC/TEST OBJ1155 notes below are historical diagnostics and
+are superseded for opt-in gameplay by `server/scene_population_9068.json`.
+That file contains three NPCs and two monsters, each with an explicit
+RECONSTRUCTED identity-to-asset assignment, coordinates, and stats. Original
+APK object-to-image asset chains and decoded block-0 walkability are VERIFIED;
+TTpc ModelID/name/text rows are REVIVED_REFERENCE only and do not join to an
+APK object ID or map spawn. The full row-by-row comparison, including source
+rows and dialogue text, is in
+`docs/research/SCENE_9068_ENTITY_PROVENANCE.md`.
+
+With `TRUTHAN_DATA_SPAWN=1`, configured cmd132 records are sent after the
+cmd10 scene-ready response. NPCs have local cmd120 function 7 / cmd73 dialogue
+responses; no recovered quest IDs or quest records are included. The cmd136
+monster request is statically understood, but the cmd137 response needs nested
+skill-effect/property data whose layout is unresolved, so combat is not
+implemented. Population is off by default. No real-client visual check of
+this populated data has passed yet.
+
 ## 2026-09-22 runtime result: one diagnostic GNPC
 
 VERIFIED for rendering/selection of TEST OBJ1014 in clean run112928 only.
@@ -347,6 +367,29 @@ server-derived NpcList arrays. Their filenames are not evidence of an NPC databa
 Another misleading ID is RoleQuest.npcId: getFunctioRoleQuest (Java 2267-2275)
 sets it to the byte loop index, while reading names/three shorts from the packet.
 It must not be treated as cmd9/cmd132's i32 runtime ID.
+
+## 2026-09-25: reconstructed scene 9068 starter set
+
+`server/scene_population_9068.json` now defines three NPC records and two
+monster records with runtime sprite IDs, appearance object IDs, names, stats,
+coordinates, selection/hit flags and NPC interaction data. Every record marks
+identity, coordinates and stats `RECONSTRUCTED`. The object-to-image asset chains
+are supported by the bundled Original Android 1.17 APK; identity associations
+remain CANDIDATE and are descriptive `Reconstructed Guide/Creature <object id>`
+labels. Do not rename them `彩云仙子` or `火狐妖`.
+
+The available TTpc `zsNpc_language`/`zsMonters_language` data supplies separate
+PC ModelID language names, and BLRM-local-inputs provides a revived APK with
+matching asset/config families; neither source supplies a proven Android
+ModelID/name-to-objectDataId or scene spawn join. These sources are recorded as
+comparative references only. Original Android 1.17 `.scn` walkability validates
+the chosen reconstructed points but contains no entity spawn table.
+
+Server-side cmd120/cmd73 interactions are configured per NPC. The reply shapes
+match the static 1.17 readers, but there is no successful client dialogue
+capture yet. Quest data is intentionally absent. Monster selection is enabled;
+server-side combat remains UNKNOWN because cmd137's nested skill effect and
+property update records lack a captured/fully decoded response schema.
 
 Stopping criterion reached: definite shared-ID bridge found. No additional web
 search was needed to establish it. Actual 彩云仙子 ID/object still requires original

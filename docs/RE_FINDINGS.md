@@ -289,6 +289,31 @@ Status: `VERIFIED` for the observed bootstrap and movement path. A required fres
 
 Evidence: `docs/research/UI_CONTROL_TRACE.json`, `docs/research/UI_CONTROL_EXPLANATION.md`, sanitized screenshots in `docs/research/ui_control_images/`, and `docs/TRUTHAN_UI_CONTROL.md`. Credentials, player names, and packet payloads are excluded from retained evidence.
 
+## 2026-09-25: scene 9068 reconstructed population and protocol boundary
+
+BLRM adds an opt-in JSON population for scene 9068: three NPCs and two
+monsters, all labeled `RECONSTRUCTED` for identity, coordinates and stats.
+Original Android APK object/image assets support the chosen numeric appearance
+chains; its decoded `.scn` supports only the block-0 walkability checks. The
+TTpc and BLRM-local-inputs comparisons in
+`docs/research/MODELID_MAP_SPAWN_JOIN.md` establish no usable Android entity
+identity or spawn join, so their names/coordinates were not copied into this
+population.
+
+JADX `GameWorld.java` client source: `sendGetNpcMissionListMessage` (18714) and
+`sendNpcFunctionTalkMessage` (19519) send cmd120/cmd73 with one NPC runtime i32.
+Their response readers are `processNpcFunctionListMessage` (8514) and
+`processNpcFunctionTalkMessage` (8676). The server implements a configured
+synthetic guide function/dialogue with empty quest groups, but client behavior
+is pending visual verification. The cmd136 attack request body is statically
+known; cmd137's nested skill-effect and property-update structures are not
+fully recovered, and no valid result capture is available. Combat response and
+quest progression remain UNKNOWN; server does not invent either packet.
+
+The map socket now polls at 60-second intervals and continues after idle timeout
+events instead of disconnecting at 300 seconds. This is a code-level fix only;
+long-idle client evidence has not been recorded.
+
 
 ## Screen watcher repair (2026-09-25)
 

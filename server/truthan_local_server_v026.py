@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import socket, threading, time, pathlib, struct, traceback, zipfile, os, json, math
 
-PORTS = [1888, 8089, 19000, 2888, 29000]
+PORT_OFFSET = int(os.environ.get("TRUTHAN_PORT_OFFSET", "0"))
+GAME_PORT = 19000 + PORT_OFFSET
+AUTH_PORT = 29000 + PORT_OFFSET
+PORTS = [1888 + PORT_OFFSET, 8089 + PORT_OFFSET, GAME_PORT,
+         2888 + PORT_OFFSET, AUTH_PORT]
 LOGDIR = pathlib.Path("truthan_packet_logs")
 LOGDIR.mkdir(exist_ok=True)
 
@@ -273,6 +277,8 @@ HUOHUYAO_OBJ_OVERRIDE = os.environ.get("TRUTHAN_HUOHUYAO_OBJ")
 # clean-mode population stay unchanged unless the operator enables it.
 DATA_SPAWN = os.environ.get("TRUTHAN_DATA_SPAWN", "0") == "1"
 BIND_HOST = os.environ.get("TRUTHAN_BIND", "127.0.0.1")
+SCENE_POPULATION_PATH = pathlib.Path(__file__).with_name("scene_population_9068.json")
+SCENE_WALKABILITY_PATH = pathlib.Path(__file__).with_name("scene_walkability_9068.json")
 
 # Evidence-backed diagnostic fixtures only. First entry is the narrow
 # VERIFIED run112928 probe (TEST OBJ1014); never rename to a tutorial NPC.
@@ -280,58 +286,50 @@ BIND_HOST = os.environ.get("TRUTHAN_BIND", "127.0.0.1")
 # OBJ/IMG assets exist in the APK and cmd132 canHit field layout is VERIFIED,
 # but the object is NOT proven to be an original game spawn or a named monster.
 # Fields match npc_view_body(); "label" is documentation-only and not sent.
-DATA_SPAWN_FIXTURES = (
-    {
-        "label": "TEST",
-        "sprite_id": 220010,
-        "name": "TEST OBJ1014",
-        "level": 1,
-        "object_data_id": 1014,
-        "x": 203,
-        "y": 253,
-        "hp": 100,
-        "max_hp": 100,
-        "mp": 100,
-        "max_mp": 100,
-        "can_select": 1,
-        "can_hit": 0,
-        "speed": 40,
-        "auto_control_type": 0,
-        "initial_state": 0,
-        "action_type": 0,
-        "action_id": 0,
-        "direction": 0,
-        "appearance_effect_gate": 1,
-        "flags": bytes([3]),
-    },
-    {
-        # RECONSTRUCTED hittable TEST monster — NOT an original game spawn.
-        # OBJ 1155 / IMG 1207 exist in the bundled APK (VERIFIED asset chain).
-        # cmd132 canHit field position is VERIFIED; identity vs 火狐妖 is UNKNOWN.
-        # Position (196,238) is walkable under GScene.canCross for scene 9068.
-        "label": "TEST_MONSTER_RECONSTRUCTED",
-        "sprite_id": 220011,
-        "name": "TEST OBJ1155",
-        "level": 1,
-        "object_data_id": 1155,
-        "x": 196,
-        "y": 238,
-        "hp": 60,
-        "max_hp": 60,
-        "mp": 20,
-        "max_mp": 20,
-        "can_select": 1,
-        "can_hit": 1,
-        "speed": 40,
-        "auto_control_type": 0,
-        "initial_state": 0,
-        "action_type": 0,
-        "action_id": 0,
-        "direction": 0,
-        "appearance_effect_gate": 1,
-        "flags": bytes([3]),
-    },
-)
+def load_scene_population(path=None, scene_id=9068):
+    path = pathlib.Path(path or SCENE_POPULATION_PATH.with_name(
+        f"scene_population_{int(scene_id)}.json"
+    ))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid scene population asset {path}: {exc}") from exc
+    if not isinstance(data, dict) or data.get("scene_id") != int(scene_id):
+        raise ValueError(f"scene population must be an object for scene {scene_id}")
+    if not isinstance(data.get("entities"), list) or not data["entities"]:
+        raise ValueError("scene population entities must be a non-empty list")
+    if any(not isinstance(record, dict) for record in data["entities"]):
+        raise ValueError("scene population entries must be objects")
+    return data["entities"]
+
+
+def scene_cell_block(x, y, path=None, scene_id=9068):
+    """Return the decoded Original 1.17 block for a scene world position."""
+    path = pathlib.Path(path or SCENE_WALKABILITY_PATH.with_name(
+        f"scene_walkability_{int(scene_id)}.json"
+    ))
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError(f"invalid decoded scene asset {path}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"malformed decoded walkability grid for scene {scene_id}")
+    width, height = data.get("width"), data.get("height")
+    blocks = data.get("blocks")
+    if (data.get("scene_id") != int(scene_id) or type(width) is not int or width <= 0
+            or type(height) is not int or height <= 0 or not isinstance(blocks, list)
+            or len(blocks) != height
+            or any(not isinstance(row, list) or len(row) != width for row in blocks)):
+        raise ValueError(f"malformed decoded walkability grid for scene {scene_id}")
+    if type(x) is not int or type(y) is not int:
+        raise ValueError("spawn position must use integer world coordinates")
+    gx, gy = x // 20, y // 16
+    if x < 0 or y < 0 or gx >= width or gy >= height:
+        raise ValueError(f"spawn position outside scene {scene_id}: ({x},{y})")
+    block = blocks[gy][gx]
+    if not isinstance(block, int) or not 0 <= block <= 15:
+        raise ValueError(f"malformed block id at ({gx},{gy})")
+    return block
 
 def current_scene_id():
     if SCENE_OVERRIDE:
@@ -474,14 +472,14 @@ def send(c, f, port, cmd, body=b"", sid=0, sess=0, label=""):
 # AUTH SERVER 29000
 # ----------------------------------------------------------------------
 
-def auth_body():
+def auth_body(game_port=GAME_PORT):
     b = bytearray([1, 0])              # login success, phoneBound=false
     b += struct.pack(">i", 10001)      # userId
     b += struct.pack(">i", 1)          # server count
 
     b += struct.pack(">i", 1)          # server id
     b += pstr("Local Test")
-    b += pstr("127.0.0.1:19000")
+    b += pstr(f"127.0.0.1:{game_port}")
     b += bytes([0, 0])                 # status=normal, role count=0
     b += pstr("")                      # MUST be empty; non-empty blocks Enter
     return bytes(b)
@@ -801,8 +799,21 @@ def npc_view_body(sprite_id, name, level, object_data_id, x, y,
 
 
 def _validated_probe_entity(**ent):
+    if ent.get("kind") not in ("npc", "monster"):
+        raise ValueError("population entity kind must be npc or monster")
+    if "provenance" not in ent or "RECONSTRUCTED" not in ent["provenance"]:
+        raise ValueError("population entity must retain RECONSTRUCTED provenance")
+    scene_id = current_scene_id()
+    if scene_cell_block(ent["x"], ent["y"], scene_id=scene_id) != 0:
+        raise ValueError(
+            f"population position is not in the verified walkable block-0 subset: "
+            f"({ent['x']},{ent['y']})"
+        )
+    if ent.get("kind") == "npc" and not isinstance(ent.get("interaction"), dict):
+        raise ValueError("NPC population entry requires interaction data")
     refs = verify_probe_object(ent["object_data_id"])
     ent = dict(ent)
+    ent["flags"] = bytes(ent.get("flags", ()))
     ent["_asset_refs"] = refs
     return ent
 
@@ -812,17 +823,16 @@ def data_spawn_entities():
     Data-driven population behind TRUTHAN_DATA_SPAWN (default OFF).
 
     When the switch is off this returns [] so the clean-mode path is unchanged.
-    When on, every fixture is APK-validated via _validated_probe_entity before
-    send; fixtures remain labelled TEST/OBJxxxx and are not original spawns.
+    When on, each scene record is validated against the decoded scene grid and
+    bundled APK assets before send. Identity, spawn placement and stats remain
+    explicitly reconstructed data, not original-server facts.
     """
     if not DATA_SPAWN:
         return []
-    if current_scene_id() != 9068:
-        raise ValueError("TRUTHAN_DATA_SPAWN fixtures require evidence-backed scene 9068")
+    scene_id = current_scene_id()
     out = []
-    for fix in DATA_SPAWN_FIXTURES:
-        row = {k: v for k, v in fix.items() if k != "label"}
-        out.append(_validated_probe_entity(**row))
+    for record in load_scene_population(scene_id=scene_id):
+        out.append(_validated_probe_entity(**record))
     return out
 
 
@@ -911,30 +921,41 @@ def starter_probe_entities():
 def send_starter_probe_entities(c, f, port, sid, sess):
     entities = starter_probe_entities()
     if not entities:
-        print("SPAWN cmd132 -> clean mode; no unverified NPC/mob population injected")
+        print("SPAWN cmd132 -> clean mode; scene population switch is OFF")
         return {}
 
     country = int(ROLE.get("country", 0))
-    for ent in entities:
-        wire_ent = {k: v for k, v in ent.items() if not k.startswith("_")}
+    wire_fields = {
+        "sprite_id", "name", "level", "object_data_id", "x", "y",
+        "hp", "max_hp", "mp", "max_mp", "can_select", "can_hit",
+        "speed", "auto_control_type", "initial_state", "flags",
+        "action_type", "action_id", "direction", "appearance_effect_gate",
+    }
+    for index, ent in enumerate(entities):
+        f.write(
+            f"POPULATION_RECORD index={index} name={ent.get('name')}\n"
+            .encode("utf-8", "replace")
+        )
+        f.flush()
+        wire_ent = {k: v for k, v in ent.items() if k in wire_fields}
         wire_ent["country"] = country
         body = npc_view_body(**wire_ent)
         refs = ent.get("_asset_refs", [])
         send(
             c, f, port, SPRITE_VIEW_MESSAGE, body, sid, sess,
-            f"PROBE SPAWN cmd132 -> {wire_ent['name']} id={wire_ent['sprite_id']} "
+            f"POPULATION cmd132 -> {wire_ent['name']} id={wire_ent['sprite_id']} "
             f"obj={wire_ent['object_data_id']} imgRefs={refs} "
             f"pos=({wire_ent['x']},{wire_ent['y']})"
         )
-        time.sleep(0.04)
     return {ent["sprite_id"]: ent for ent in entities}
 
 
 def npc_function_list_body(greeting, functions=()):
     """Cmd120: greeting, four empty quest groups, then function records.
 
-    GameWorld.processNpcFunctionListMessage; function 7 routes to talk (cmd73).
-    No original quest data is supplied by this diagnostic encoder.
+    GameWorld.processNpcFunctionListMessage reads the four quest group counts,
+    then function count and (flagId i8, flag i16, label string) records.
+    Original quest records are deliberately absent.
     """
     if len(functions) > 127:
         raise ValueError("function count exceeds signed byte")
@@ -1039,13 +1060,13 @@ def handle(c, addr, port):
         f.flush()
         print(m.strip())
 
-        c.settimeout(300)
+        c.settimeout(60)
         close_reason = "unknown"
         buf = bytearray()
         visible_npcs = {}
         last_move = None
         last_npc_request = None
-        if port == 19000:
+        if port == GAME_PORT:
             write_runtime_state(
                 visible_npcs,
                 movement=last_move,
@@ -1057,9 +1078,8 @@ def handle(c, addr, port):
             try:
                 d = c.recv(65535)
             except socket.timeout:
-                close_reason = "server_idle_300s"
-                print(f"TIMEOUT port={port} peer={addr}")
-                break
+                # Keep idle map sessions alive and continue checking the peer.
+                continue
             except OSError as e:
                 close_reason = f"socket_error_{type(e).__name__}"
                 print(f"SOCKET ERROR port={port}: {e}")
@@ -1076,7 +1096,7 @@ def handle(c, addr, port):
                 log_block(f, "RX-FRAME", fr, port, cmd, wire)
 
                 try:
-                    if port == 29000:
+                    if port == AUTH_PORT:
                         if cmd == AUTH_LOGIN:
                             send(
                                 c, f, port, AUTH_LOGIN_RSP, auth_body(), sid, sess,
@@ -1090,7 +1110,7 @@ def handle(c, addr, port):
                         else:
                             print(f"AUTH unhandled cmd={cmd}")
 
-                    elif port == 19000:
+                    elif port == GAME_PORT:
                         if cmd == LOGIN_GAME:
                             send(
                                 c, f, port, LOGIN_GAME, login_game_rsp(), sid, sess,
@@ -1152,30 +1172,34 @@ def handle(c, addr, port):
                             )
 
                         elif cmd in (NPC_FUNCTION_LIST, NPC_FUNCTION_TALK):
-                            # Restrict diagnostic dialogue to an entity spawned
-                            # on this connection; do not fabricate quest records.
+                            # Serve interaction only for a populated NPC with
+                            # explicit data; quest records remain unsupported.
                             if len(body) != 4:
                                 print(f"NPC cmd{cmd} malformed len={len(body)}")
                                 continue
                             npc_id = struct.unpack(">i", body)[0]
                             npc = visible_npcs.get(npc_id)
-                            available = SINGLE_NPC_PROBE and npc is not None
+                            interaction = npc.get("interaction") if npc else None
+                            available = bool(
+                                npc and npc.get("kind") == "npc"
+                                and isinstance(interaction, dict)
+                            )
                             if cmd == NPC_FUNCTION_LIST:
                                 reply = npc_function_list_body(
-                                    "NPC thu nghiem. Chon Noi chuyen de kiem tra." if available else "NPC unavailable.",
-                                    ((0, 7, "Noi chuyen"),) if available else (),
+                                    interaction["greeting"] if available else "NPC unavailable.",
+                                    ((0, int(interaction["function_id"]),
+                                      interaction["function_label"]),) if available else (),
                                 )
                             else:
-                                reply = npc_talk_body(((
-                                    "Kiem tra tuong tac",
-                                    "Tuong tac NPC da hoat dong. Day la NPC thu nghiem, chua co nhiem vu.",
-                                ),)) if available else bytes([1])
+                                reply = npc_talk_body((
+                                    (interaction["title"], interaction["text"]),
+                                )) if available else bytes([1])
                             send(c, f, port, cmd, reply, sid, sess,
-                                 f"NPC cmd{cmd} -> id={npc_id} diagnostic={available}")
+                                 f"NPC cmd{cmd} -> id={npc_id} interaction={available}")
                             last_npc_request = {
                                 "cmd": int(cmd),
                                 "npc_id": int(npc_id),
-                                "diagnostic_available": bool(available),
+                                "interaction_available": bool(available),
                                 "received_unix_ms": int(time.time() * 1000),
                             }
                             write_runtime_state(
@@ -1259,9 +1283,10 @@ def handle(c, addr, port):
                             )
 
                 except Exception:
-                    traceback.print_exc()
+                    f.write(traceback.format_exc().encode("utf-8", "replace"))
+                    f.flush()
 
-        if port == 19000:
+        if port == GAME_PORT:
             write_runtime_state(
                 visible_npcs,
                 movement=last_move,
@@ -1289,8 +1314,8 @@ for p in PORTS:
 
 print("Tru Than LOCAL SERVER v0.26 ready")
 print("FLOW:")
-print("  29000 auth")
-print("  19000 FE/277 game verify")
+print(f"  {AUTH_PORT} auth")
+print(f"  {GAME_PORT} FE/277 game verify")
 print("  role list -> create role -> join -> country starter scene")
 print(f"  NPC asset probe: {'ON' if (NPC_ASSET_PROBE or CAIYUN_OBJ_OVERRIDE) else 'OFF'}")
 print(f"  single diagnostic NPC: {'TEST OBJ1014' if SINGLE_NPC_PROBE else 'OFF'}")
