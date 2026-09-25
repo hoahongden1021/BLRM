@@ -207,3 +207,6 @@ Next action: Fix the Python server startup command in `02_test_npc_probe.bat` to
   scene entry, movement, NPC selection, dialogue, and published screenshots
   remain unverified. Do not retry login, create a role, or restart the server
   under this session's constraints.
+- The earlier continuation restarted the runtime before the user changed the
+  workflow to reuse the existing process and character; no restart was made
+  after that correction. The resulting role_count=0 is the concrete blocker.
