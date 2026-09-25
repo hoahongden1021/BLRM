@@ -21,6 +21,7 @@ STATE_PATH = RUNTIME_DIR / "screen_state.json"
 STATUS_PATH = WATCH_DIR / "status.json"
 PID_PATH = WATCH_DIR / "watcher.pid"
 STOP_PATH = WATCH_DIR / "stop.flag"
+OBSERVE_REQUEST_PATH = WATCH_DIR / "observe_request.json"
 LOG_PATH = WATCH_DIR / "watcher.log"
 
 DEFAULT_PORT = 27191
@@ -81,11 +82,24 @@ def _adb(*args: str, timeout: float = 30, check: bool = True) -> subprocess.Comp
 
 def _atomic_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp = path.with_suffix(path.suffix + f".{os.getpid()}.{threading.get_ident()}.tmp")
     with tmp.open("w", encoding="utf-8", newline="\n") as f:
         json.dump(payload, f, ensure_ascii=True, indent=2)
         f.write("\n")
-    os.replace(tmp, path)
+    try:
+        for attempt in range(5):
+            try:
+                os.replace(tmp, path)
+                break
+            except PermissionError:
+                if attempt == 4:
+                    raise
+                time.sleep(0.05 * (attempt + 1))
+    finally:
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
 
 
 def _read_json(path: Path) -> dict[str, Any] | None:
@@ -107,16 +121,23 @@ def _log_tail(max_chars: int = 8000) -> str:
     return text.strip()
 
 
+def _log_event(message: str) -> None:
+    WATCH_DIR.mkdir(parents=True, exist_ok=True)
+    with LOG_PATH.open("a", encoding="utf-8", newline="\n") as f:
+        f.write(f"[{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}] {message}\n")
+
+
 def _pid_alive(pid: int) -> bool:
     if pid <= 0:
         return False
     if os.name == "nt":
         cp = _run(
-            ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+            ["powershell.exe", "-NoProfile", "-Command",
+             f"if (Get-Process -Id {pid} -ErrorAction SilentlyContinue) {{ 'alive' }}"],
             timeout=10,
             check=False,
         )
-        return str(pid) in cp.stdout and "No tasks are running" not in cp.stdout
+        return cp.returncode == 0 and "alive" in cp.stdout
     try:
         os.kill(pid, 0)
         return True
@@ -512,6 +533,9 @@ class SharedFrame:
         self.frames_decoded = 0
         self.decode_error: str | None = None
         self.ocr_error: str | None = None
+        self.ocr_requested = threading.Event()
+        self.connected = False
+        self.last_observe_request = 0.0
         self.done = False
 
     def put(self, frame: Any) -> None:
@@ -530,6 +554,9 @@ def _decode_loop(sock: socket.socket, shared: SharedFrame) -> None:
     import av  # type: ignore
 
     codec = av.CodecContext.create("h264", "r")
+    # FFmpeg otherwise auto-selects many host cores for a 30 FPS stream.
+    codec.thread_count = 1
+    shared.connected = True
     try:
         while not STOP_PATH.exists():
             try:
@@ -547,7 +574,7 @@ def _decode_loop(sock: socket.socket, shared: SharedFrame) -> None:
     except Exception as exc:
         shared.decode_error = f"{type(exc).__name__}: {exc}"
     finally:
-        shared.done = True
+        shared.connected = False
 
 
 def _ocr_loop(
@@ -564,7 +591,11 @@ def _ocr_loop(
 
     # `max` prevents the detector from enlarging the resized frame back to
     # its default 736-pixel minimum short side.
-    engine = RapidOCR(params={"Det.limit_type": "max"})
+    engine = RapidOCR(params={
+        "Det.limit_type": "max",
+        "EngineConfig.onnxruntime.intra_op_num_threads": 1,
+        "EngineConfig.onnxruntime.inter_op_num_threads": 1,
+    })
     min_interval = 1.0 / max(ocr_fps, 0.1)
     last_ocr_start = 0.0
     last_ocr_done = 0.0
@@ -573,7 +604,8 @@ def _ocr_loop(
 
     while not STOP_PATH.exists():
         now = time.time()
-        if now - last_ocr_start < min_interval:
+        forced = shared.ocr_requested.is_set()
+        if now - last_ocr_start < min_interval and not forced:
             time.sleep(0.03)
             continue
 
@@ -587,7 +619,7 @@ def _ocr_loop(
         sig = _frame_signature(frame)
         delta = _signature_delta(sig, last_sig)
         idle_due = (now - last_ocr_done) >= max_idle_seconds
-        if last_sig is not None and delta < change_threshold and not idle_due:
+        if last_sig is not None and delta < change_threshold and not idle_due and not forced:
             last_frame_id = frame_id
             time.sleep(0.03)
             continue
@@ -596,6 +628,7 @@ def _ocr_loop(
         ocr_frame = _ocr_input_frame(frame, ocr_max_size)
         ocr_size = (int(ocr_frame.shape[1]), int(ocr_frame.shape[0]))
 
+        shared.ocr_requested.clear()
         last_ocr_start = time.time()
         result = engine(ocr_frame)
         fast_ocr_elapsed = time.time() - last_ocr_start
@@ -638,6 +671,7 @@ def _ocr_loop(
             "frame_id": frame_id,
             "frame_timestamp_epoch": frame_ts,
             "frame_age_ms": max(0.0, (time.time() - frame_ts) * 1000.0),
+            "ocr_timestamp_epoch": time.time(),
             "frame_size": [stream_size[0], stream_size[1]],
             "ocr_frame_size": [ocr_size[0], ocr_size[1]],
             "ocr_to_stream_scale": [
@@ -693,6 +727,9 @@ def _write_status(
     _atomic_json(STATUS_PATH, payload)
 
 
+MAX_RECONNECT_ATTEMPTS = 3
+
+
 def worker(args: argparse.Namespace) -> int:
     if args.ocr_max_size < 0 or 0 < args.ocr_max_size < 128:
         raise WatchError("--ocr-max-size must be 0 or at least 128")
@@ -709,10 +746,9 @@ def worker(args: argparse.Namespace) -> int:
 
     WATCH_DIR.mkdir(parents=True, exist_ok=True)
     STOP_PATH.unlink(missing_ok=True)
+    OBSERVE_REQUEST_PATH.unlink(missing_ok=True)
     PID_PATH.write_text(str(os.getpid()), encoding="ascii")
 
-    server_proc: subprocess.Popen[bytes] | None = None
-    sock: socket.socket | None = None
     shared = SharedFrame()
     decoder: threading.Thread | None = None
     ocr_thread: threading.Thread | None = None
@@ -730,20 +766,6 @@ def worker(args: argparse.Namespace) -> int:
 
         device_size = _device_screen_size()
 
-        server_proc, sock = _launch_scrcpy_server(
-            server,
-            version,
-            port=args.port,
-            max_size=args.max_size,
-            max_fps=args.max_fps,
-        )
-
-        decoder = threading.Thread(
-            target=_decode_loop,
-            args=(sock, shared),
-            name="truthan-screen-decode",
-            daemon=True,
-        )
         ocr_thread = threading.Thread(
             target=_ocr_loop_guarded,
             args=(shared,),
@@ -757,50 +779,107 @@ def worker(args: argparse.Namespace) -> int:
             name="truthan-screen-ocr",
             daemon=True,
         )
-        decoder.start()
         ocr_thread.start()
-
-        _write_status(
-            "running",
-            port=args.port,
-            extra={
-                "scrcpy_version": version,
-                "max_size": args.max_size,
-                "max_fps": args.max_fps,
-                "device_size": list(device_size),
-                "ocr_max_size": args.ocr_max_size,
-                "ocr_fps": args.ocr_fps,
-                "change_threshold": args.change_threshold,
-            },
-        )
-
+        reconnects = 0
+        last_disconnect_cause: str | None = None
+        base_status = {
+            "scrcpy_version": version, "max_size": args.max_size,
+            "max_fps": args.max_fps, "device_size": list(device_size),
+            "ocr_max_size": args.ocr_max_size, "ocr_fps": args.ocr_fps,
+            "change_threshold": args.change_threshold,
+        }
         while not STOP_PATH.exists():
-            if shared.decode_error:
-                raise WatchError(shared.decode_error)
-            if shared.ocr_error:
-                raise WatchError(f"OCR worker failed: {shared.ocr_error}")
-            if not ocr_thread.is_alive():
-                raise WatchError("OCR worker stopped unexpectedly")
-            if server_proc.poll() is not None:
-                raise WatchError(
-                    f"scrcpy server exited with code {server_proc.returncode}"
+            request = _read_json(OBSERVE_REQUEST_PATH)
+            if request and request.get("requested_at", 0) > shared.last_observe_request:
+                shared.last_observe_request = float(request["requested_at"])
+                shared.ocr_requested.set()
+            shared.decode_error = None
+            server_proc = None
+            sock = None
+            try:
+                server_proc, sock = _launch_scrcpy_server(
+                    server, version, port=args.port,
+                    max_size=args.max_size, max_fps=args.max_fps,
                 )
-            _write_status(
-                "running",
-                port=args.port,
-                extra={
-                    "scrcpy_version": version,
-                    "max_size": args.max_size,
-                    "max_fps": args.max_fps,
-                    "ocr_max_size": args.ocr_max_size,
-                    "frames_decoded": shared.frames_decoded,
-                    "last_frame_timestamp_epoch": shared.frame_ts,
-                    "screen_state_exists": STATE_PATH.exists(),
-                },
-            )
-            time.sleep(1.0)
+                decoder = threading.Thread(
+                    target=_decode_loop, args=(sock, shared),
+                    name="truthan-screen-decode", daemon=True,
+                )
+                decoder.start()
+                _write_status("running", port=args.port, extra={**base_status,
+                    "reconnect_attempt": reconnects, "connected": True,
+                    "last_disconnect_cause": last_disconnect_cause})
+                while not STOP_PATH.exists() and not shared.decode_error:
+                    request = _read_json(OBSERVE_REQUEST_PATH)
+                    if request and request.get("requested_at", 0) > shared.last_observe_request:
+                        shared.last_observe_request = float(request["requested_at"])
+                        shared.ocr_requested.set()
+                    if shared.ocr_error:
+                        raise WatchError(f"OCR worker failed: {shared.ocr_error}")
+                    if not ocr_thread.is_alive():
+                        raise WatchError("OCR worker stopped unexpectedly")
+                    if server_proc.poll() is not None:
+                        shared.decode_error = f"scrcpy server exited with code {server_proc.returncode}"
+                        break
+                    state = _read_json(STATE_PATH) or {}
+                    _write_status("running", port=args.port, extra={**base_status,
+                        "connected": shared.connected, "reconnect_attempt": reconnects,
+                        "last_disconnect_cause": last_disconnect_cause,
+                        "frames_decoded": shared.frames_decoded,
+                        "last_frame_id": shared.frame_id,
+                        "last_frame_timestamp_epoch": shared.frame_ts,
+                        "ocr_timestamp_epoch": state.get("ocr_timestamp_epoch"),
+                        "screen_state_exists": bool(state)})
+                    time.sleep(0.25)
+                if STOP_PATH.exists():
+                    break
+                cause = shared.decode_error or "scrcpy stream ended without a cause"
+                last_disconnect_cause = cause
+                reconnects += 1
+                _log_event(f"scrcpy disconnect; reconnect_attempt={reconnects}; cause={cause}")
+                _write_status("recovering", port=args.port, extra={**base_status,
+                    "connected": False, "reconnect_attempt": reconnects,
+                    "last_disconnect_cause": cause})
+                if sock is not None:
+                    try: sock.close()
+                    except OSError: pass
+                if server_proc is not None and server_proc.poll() is None:
+                    server_proc.terminate()
+                    try: server_proc.wait(timeout=2)
+                    except subprocess.TimeoutExpired: server_proc.kill()
+                if reconnects > MAX_RECONNECT_ATTEMPTS:
+                    raise WatchError(f"scrcpy stream recovery exhausted after {MAX_RECONNECT_ATTEMPTS} retries; last cause: {cause}")
+                time.sleep(min(0.5 * reconnects, 1.5))
+            except Exception as exc:
+                if isinstance(exc, WatchError) and "recovery exhausted" in str(exc):
+                    raise
+                if shared.ocr_error or (ocr_thread is not None and not ocr_thread.is_alive()):
+                    raise
+                if STOP_PATH.exists():
+                    break
+                reconnects += 1
+                cause = f"{type(exc).__name__}: {exc}"
+                last_disconnect_cause = cause
+                _log_event(f"scrcpy recovery error; reconnect_attempt={reconnects}; cause={cause}")
+                _write_status("recovering", port=args.port, extra={**base_status,
+                    "connected": False, "reconnect_attempt": reconnects,
+                    "last_disconnect_cause": cause})
+                if reconnects > MAX_RECONNECT_ATTEMPTS:
+                    raise WatchError(f"scrcpy recovery exhausted after {MAX_RECONNECT_ATTEMPTS} retries; last cause: {cause}") from exc
+                time.sleep(min(0.5 * reconnects, 1.5))
+            finally:
+                if sock is not None:
+                    try: sock.close()
+                    except OSError: pass
+                if server_proc is not None and server_proc.poll() is None:
+                    server_proc.terminate()
+                    try: server_proc.wait(timeout=2)
+                    except subprocess.TimeoutExpired: server_proc.kill()
 
         _write_status("stopping", port=args.port)
+        shared.done = True
+        if ocr_thread is not None:
+            ocr_thread.join(timeout=2)
         return 0
     except Exception as exc:
         _write_status(
@@ -811,24 +890,7 @@ def worker(args: argparse.Namespace) -> int:
         raise
     finally:
         STOP_PATH.touch(exist_ok=True)
-        if sock is not None:
-            try:
-                sock.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
-            try:
-                sock.close()
-            except OSError:
-                pass
-        if server_proc is not None and server_proc.poll() is None:
-            try:
-                server_proc.terminate()
-                server_proc.wait(timeout=2)
-            except Exception:
-                try:
-                    server_proc.kill()
-                except Exception:
-                    pass
+        shared.done = True
         _adb("forward", "--remove", f"tcp:{args.port}", check=False)
         _kill_old_raw_scrcpy_servers()
         _adb("shell", "rm", "-f", REMOTE_SERVER, check=False)
@@ -930,10 +992,12 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
         "cwd": str(ROOT),
         "stdout": log_fp,
         "stderr": log_fp,
+        "stdin": subprocess.DEVNULL,
+        "close_fds": True,
     }
     if os.name == "nt":
         kwargs["creationflags"] = (
-            subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
+            subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS
         )
 
     try:
@@ -943,15 +1007,14 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
 
     PID_PATH.write_text(str(proc.pid), encoding="ascii")
 
-    deadline = time.time() + 25.0
+    deadline = time.time() + 15.0
     last_status = None
     while time.time() < deadline:
         last_status = _read_json(STATUS_PATH)
         if last_status and last_status.get("pid") == proc.pid:
             if last_status.get("status") == "running":
                 frames = int(last_status.get("frames_decoded") or 0)
-                state_exists = bool(last_status.get("screen_state_exists"))
-                if frames > 0 and state_exists:
+                if frames > 0:
                     return {
                         "started": True,
                         "pid": proc.pid,
@@ -972,7 +1035,7 @@ def start_watcher(args: argparse.Namespace) -> dict[str, Any]:
         time.sleep(0.2)
 
     raise WatchError(
-        "watcher did not decode a frame and publish screen_state in time; "
+        "watcher did not decode a frame in time; "
         f"last_status={last_status}; log_tail={_log_tail()!r}"
     )
 
@@ -986,13 +1049,44 @@ def watcher_status() -> dict[str, Any]:
         frame_age_now_ms = max(
             0.0, (time.time() - state["frame_timestamp_epoch"]) * 1000.0
         )
+    now = time.time()
+    ocr_ts = state.get("ocr_timestamp_epoch") if state else None
+    latest_frame_ts = meta.get("last_frame_timestamp_epoch")
     return {
         "running": bool(pid and _pid_alive(pid)),
         "pid": pid,
         "status": meta,
         "screen_state_frame_age_now_ms": frame_age_now_ms,
+        "frame_timestamp_epoch": latest_frame_ts,
+        "frame_age_now_ms": max(0.0, (now - latest_frame_ts) * 1000.0)
+        if isinstance(latest_frame_ts, (int, float)) else None,
+        "ocr_timestamp_epoch": ocr_ts,
+        "ocr_age_now_ms": max(0.0, (now - ocr_ts) * 1000.0)
+        if isinstance(ocr_ts, (int, float)) else None,
         "screen_state": state,
     }
+
+
+def watcher_observe(timeout: float = 8.0) -> dict[str, Any]:
+    """Request OCR of a post-request frame and return separate frame/OCR ages."""
+    current = watcher_status()
+    if not current["running"] or (current["status"] or {}).get("status") != "running":
+        raise WatchError("screen watcher is unavailable; use a fresh ADB screenshot")
+    requested_at = time.time()
+    _atomic_json(OBSERVE_REQUEST_PATH, {"requested_at": requested_at})
+    deadline = requested_at + timeout
+    while time.time() < deadline:
+        meta = _read_json(STATUS_PATH) or {}
+        state = _read_json(STATE_PATH) or {}
+        if ((meta.get("status") == "running" or meta.get("status") == "recovering")
+                and state.get("frame_timestamp_epoch", 0) >= requested_at
+                and state.get("ocr_timestamp_epoch", 0) >= requested_at):
+            result = watcher_status()
+            result["observe_requested_at_epoch"] = requested_at
+            result["observe_wait_ms"] = (time.time() - requested_at) * 1000.0
+            return result
+        time.sleep(0.05)
+    raise WatchError("timed out waiting for fresh watcher OCR; use a fresh ADB screenshot")
 
 
 def watcher_status_brief() -> dict[str, Any]:
@@ -1005,7 +1099,12 @@ def watcher_status_brief() -> dict[str, Any]:
         "pid": result["pid"],
         "frames_decoded": meta.get("frames_decoded"),
         "screen_state_frame_age_now_ms": result["screen_state_frame_age_now_ms"],
-        "frame_id": state.get("frame_id"),
+        "frame_age_now_ms": result["frame_age_now_ms"],
+        "ocr_age_now_ms": result["ocr_age_now_ms"],
+        "frame_id": meta.get("last_frame_id"),
+        "ocr_frame_id": state.get("frame_id"),
+        "last_disconnect_cause": meta.get("last_disconnect_cause"),
+        "reconnect_attempt": meta.get("reconnect_attempt"),
         "ocr_wall_seconds": state.get("ocr_wall_seconds"),
         "ocr_fast_wall_seconds": state.get("ocr_fast_wall_seconds"),
         "ocr_frame_size": state.get("ocr_frame_size"),
@@ -1025,6 +1124,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     sub.add_parser("doctor")
     sub.add_parser("status").add_argument("--brief", action="store_true")
+    observe = sub.add_parser("observe")
+    observe.add_argument("--timeout", type=float, default=8.0)
     sub.add_parser("stop")
 
     def add_runtime_args(sp: argparse.ArgumentParser) -> None:
@@ -1055,6 +1156,8 @@ def main() -> int:
         elif args.command == "status":
             result = watcher_status_brief() if args.brief else watcher_status()
             print(json.dumps(result, ensure_ascii=False, indent=2))
+        elif args.command == "observe":
+            print(json.dumps(watcher_observe(args.timeout), ensure_ascii=False, indent=2))
         elif args.command == "stop":
             print(json.dumps(stop_watcher(), ensure_ascii=False, indent=2))
         elif args.command == "_worker":

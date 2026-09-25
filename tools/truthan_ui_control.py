@@ -171,7 +171,70 @@ class Controller:
         with self.trace.open("a", encoding="utf-8") as f:
             f.write(json.dumps(event, ensure_ascii=True) + "\n")
 
-    def observe(self):
+    def observe(self, source="auto"):
+        """Prefer a fresh watcher OCR frame; retain the proven ADB OCR fallback."""
+        from truthan_screen_watch import WatchError, watcher_observe
+        from PIL import Image
+
+        if source == "adb":
+            return self.observe_adb()
+
+        focus = gui.current_focus()
+        if not focus["truthan_foreground"]:
+            raise Blocked("com.t4game is not foreground")
+        try:
+            watched = watcher_observe(timeout=8.0)
+            state = watched["screen_state"]
+            from truthan_screen_watch import _device_screen_size
+            device_size = list(_device_screen_size())
+            if device_size != state.get("device_size"):
+                raise Blocked("Watcher/device dimensions changed; refusing coordinate mapping")
+            raw = gui.capture_transient()
+            self.index += 1
+            destination = self.directory / f"{self.index:03d}.png"
+            try:
+                with Image.open(raw) as im:
+                    if list(im.size) != device_size:
+                        raise Blocked("Fresh ADB screenshot dimensions disagree with device dimensions")
+                    width, height = im.size
+                    from PIL import ImageDraw
+                    draw = ImageDraw.Draw(im)
+                    items = []
+                    sw, sh = state["frame_size"]
+                    for item in state.get("items", []):
+                        box = [[round(p[0] * width / sw), round(p[1] * height / sh)]
+                               for p in item["box"]]
+                        items.append({"text": item["text"], "score": item["score"], "box": box})
+                        if item["text"] not in LABELS:
+                            draw.rectangle((min(p[0] for p in box)-8, min(p[1] for p in box)-8,
+                                            max(p[0] for p in box)+8, max(p[1] for p in box)+8), fill="black")
+                    classification = state.get("classification", {})
+                    screen = classification.get("substate") or classification.get("state", "UNKNOWN")
+                    if screen == "UNKNOWN_SCREEN":
+                        screen = "UNKNOWN"
+                    if screen in ("ACCOUNT_LOGIN", "UNKNOWN"):
+                        draw.rectangle((width*.46, height*.15, width*.67, height*.30), fill="black")
+                    im.save(destination)
+                runtime = read_json(LOGS / "runtime_state.json")
+                packets = packet_evidence(self.started)
+                captured = state["frame_timestamp_epoch"]
+                obs = dict(captured=captured, dimensions=[width, height], screen=screen,
+                           items=items, runtime=runtime, packets=packets,
+                           screenshot=str(destination.relative_to(ROOT)), source="watcher",
+                           frame_id=state["frame_id"], frame_age_ms=watched["frame_age_now_ms"],
+                           observe_wait_ms=watched.get("observe_wait_ms"),
+                           ocr_timestamp_epoch=state["ocr_timestamp_epoch"],
+                           ocr_age_ms=watched["ocr_age_now_ms"], device_size=device_size)
+                obs["in_game"] = bool(world_verified(screen, runtime, packets, self.started))
+                self.record(tool="truthan_screen_watch.observe", observation=safe_observation(obs))
+                return obs
+            finally:
+                gui.cleanup_transient(raw)
+        except (WatchError, OSError, ValueError, KeyError) as exc:
+            self.record(event="watcher_fallback", reason=str(exc))
+            return self.observe_adb()
+
+    def observe_adb(self):
         from PIL import Image, ImageDraw
         from rapidocr import RapidOCR
         from truthan_rapidocr import _extract
@@ -202,9 +265,15 @@ class Controller:
                 if screen in ("ACCOUNT_LOGIN", "UNKNOWN"):
                     draw.rectangle((width*.46, height*.15, width*.67, height*.30), fill="black")
                 im.save(destination)
+            from truthan_screen_watch import _device_screen_size
+            device_size = list(_device_screen_size())
+            if [width, height] != device_size:
+                raise Blocked("Fresh ADB screenshot dimensions disagree with device dimensions")
             obs = dict(captured=captured, dimensions=[width, height], screen=screen,
                        items=items, runtime=runtime, packets=packets,
-                       screenshot=str(destination.relative_to(ROOT)))
+                       screenshot=str(destination.relative_to(ROOT)), source="adb",
+                       frame_id=None, frame_age_ms=0, ocr_timestamp_epoch=time.time(),
+                       ocr_age_ms=0, device_size=device_size)
             obs["in_game"] = bool(world_verified(screen, runtime, packets, self.started))
             self.record(tool="truthan_gui.capture + RapidOCR", command=["adb", "shell", "screencap", "-p", gui.REMOTE_SCREENSHOT],
                         observation=safe_observation(obs))
@@ -219,8 +288,15 @@ class Controller:
         return center(min(matches, key=lambda i: center(i)[1]))
 
     def action(self, obs, args, basis):
-        if time.time() - obs["captured"] > 12:
+        max_age = 1.5 if obs.get("source") == "watcher" else 3.0
+        if time.time() - obs["captured"] > max_age:
             raise Blocked("Observation expired; obtain a fresh screenshot")
+        if obs.get("source") == "watcher" and (obs.get("frame_age_ms", 99999) > 1000
+                                                  or obs.get("ocr_age_ms", 99999) > 1500):
+            raise Blocked("Watcher frame/OCR is stale; obtain a fresh observation")
+        from truthan_screen_watch import _device_screen_size
+        if list(_device_screen_size()) != obs.get("dimensions"):
+            raise Blocked("Device dimensions changed since observation; refusing tap")
         if not gui.current_focus()["truthan_foreground"]:
             raise Blocked("App lost foreground before input")
         self.record(tool="truthan_gui.adb", command=["adb", *safe_command(args)], before=safe_observation(obs),
@@ -394,6 +470,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("status")
+    observe = sub.add_parser("observe")
+    observe.add_argument("--source", choices=("auto", "watcher", "adb"), default="auto")
     boot = sub.add_parser("bootstrap")
     boot.add_argument("--fresh", action="store_true", help="Start a new runtime; server discards in-memory roles")
     boot.add_argument("--restart-client", action="store_true", help="Reconnect within the same fresh runtime session")
@@ -406,7 +484,9 @@ def main():
     if args.command == "move" and not 100 <= args.duration_ms <= 1000:
         parser.error("duration-ms must be 100..1000")
     session = read_json(SESSION)
-    if args.command == "bootstrap" and (args.fresh or not session_alive(session)):
+    if args.command == "observe":
+        session = {"started": time.time()}
+    elif args.command == "bootstrap" and (args.fresh or not session_alive(session)):
         session = start_session()
     elif not session_alive(session):
         raise Blocked("No matching fresh runtime session; run bootstrap first")
@@ -423,6 +503,8 @@ def main():
             result = controller.bootstrap(args.name)
         elif args.command == "move":
             result = controller.move(args.duration_ms)
+        elif args.command == "observe":
+            result = safe_observation(controller.observe(args.source))
         else:
             result = safe_observation(controller.observe())
         print(json.dumps({"result": result, "trace": str(controller.trace.relative_to(ROOT))}, ensure_ascii=True, indent=2))

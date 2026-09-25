@@ -99,6 +99,24 @@ class ControllerTests(unittest.TestCase):
         with self.assertRaisesRegex(ui.Blocked,"expired"):
             controller.action({"captured":time.time()-60},["shell","input","tap","1","1"],"test")
 
+    def test_watcher_observation_rejects_stale_frame_or_ocr(self):
+        controller=ui.Controller.__new__(ui.Controller)
+        for field, age in (("frame_age_ms", 1001), ("ocr_age_ms", 1501)):
+            obs={"captured":time.time(), "source":"watcher", "frame_age_ms":0,
+                 "ocr_age_ms":0, field:age}
+            with self.subTest(field=field), self.assertRaisesRegex(ui.Blocked,"stale"):
+                controller.action(obs,["shell","input","tap","1","1"],"test")
+
+    def test_dimension_mismatch_never_taps(self):
+        controller=ui.Controller.__new__(ui.Controller)
+        obs={"captured":time.time(), "source":"adb", "dimensions":[100,100]}
+        with patch("truthan_screen_watch._device_screen_size", return_value=(200,200)), \
+             patch.object(ui.gui, "current_focus", return_value={"truthan_foreground":True}), \
+             patch.object(ui.gui, "adb") as adb:
+            with self.assertRaisesRegex(ui.Blocked,"dimensions changed"):
+                controller.action(obs,["shell","input","tap","1","1"],"test")
+            adb.assert_not_called()
+
     def test_native_center_and_duplicate_target(self):
         item=dict(text="确定",score=.99,box=[[100,200],[200,200],[200,240],[100,240]])
         self.assertEqual(ui.center(item),[150,220])

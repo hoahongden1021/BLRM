@@ -83,7 +83,17 @@ Agent screenshots must not clutter the repository root.
 - Explicit `shot` is the exception: it is a deliberate retained capture and defaults to `runtime/agent/screenshots/manual.png`.
 - Old root-level `.agent_screen.png` / `.agent_vision.json` files from previous bridge versions are removed on the next fresh `launch`.
 
-## Experimental realtime screen watcher
+## Current screen watcher result (2026-09-25)
+
+The watcher repair has a real-emulator soak and observation comparison recorded in `docs/research/SCREEN_WATCH_REPAIR_20260925.md`. `start` returns to its invoking PowerShell while a detached `CREATE_NO_WINDOW` worker continues independently. Frame decoding and OCR run on separate threads; status reports latest frame ID/age and OCR frame ID/age separately. A request to `observe` waits for OCR of a frame captured after the request.
+
+**VERIFIED on the tested Android 15 emulator:** 10m11s, 21 samples, every sample running, frame IDs 1779→9708, at least 382 frames per 30-second interval, maximum frame age 301 ms. OCR age was independently 52–3461 ms; process CPU increased 340.2 seconds, threads stayed 50–54, and private memory ranged 626–728 MB with no increase over the run. No status errors or reconnects occurred after the atomic status-write retry was added. A separate deliberate stream interruption recovered after one attempt; see the detailed evidence report for the observed server exit code and frame progression.
+
+`truthan_ui_control.py observe --source auto|watcher|adb` uses a post-request watcher OCR when available and falls back to its existing ADB screenshot/OCR path when the watcher is unavailable. It verifies device and screenshot dimensions before mapping; watcher-based taps require frame age ≤1 second and OCR age ≤1.5 seconds, with a second device-size check before input. Bootstrap and movement logic remain on their existing paths. This result supports fast continuous frame observation with slower OCR; do not infer an OCR result is current from the worker's running status alone.
+
+The older experiments below are historical. Their instruction to keep the launch console open was superseded by the detached worker behavior above.
+
+## Historical experimental realtime screen watcher
 
 This path has now passed a narrow real-emulator proof:
 - scrcpy 4.1 raw H.264 frames were decoded in memory;

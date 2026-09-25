@@ -1,0 +1,27 @@
+﻿{
+    "started_utc":  "2026-09-25T10:18:26.1510664+00:00",
+    "ended_utc":  "2026-09-25T10:28:37.3986531+00:00",
+    "duration_seconds":  611.2,
+    "samples":  21,
+    "all_status_running":  true,
+    "frame_id_first":  1779,
+    "frame_id_last":  9708,
+    "frame_id_increased_every_interval":  true,
+    "minimum_frames_per_interval":  382,
+    "maximum_frame_age_ms":  301.4,
+    "maximum_ocr_age_ms":  3460.5,
+    "minimum_ocr_age_ms":  51.8,
+    "cpu_seconds_delta":  340.2,
+    "maximum_cpu_seconds_per_interval":  26.6,
+    "thread_min":  50,
+    "thread_max":  54,
+    "private_memory_min_mb":  626,
+    "private_memory_max_mb":  728.3,
+    "private_memory_first_mb":  728.3,
+    "private_memory_last_mb":  659.5,
+    "reconnect_attempts_last":  0,
+    "errors":  [
+
+               ],
+    "samples_path":  "docs/research/SCREEN_WATCH_SOAK_20260925.json"
+}

@@ -288,3 +288,8 @@ Status: `VERIFIED` for the observed bootstrap and movement path. A required fres
 `TEST OBJ1014` was not visible by screenshot/OCR in this client run. `runtime_state.json` reported `npcs=[]`, which only covers entities sent through this server's cmd132 probe path; this does not establish absence from unrendered map layers.
 
 Evidence: `docs/research/UI_CONTROL_TRACE.json`, `docs/research/UI_CONTROL_EXPLANATION.md`, sanitized screenshots in `docs/research/ui_control_images/`, and `docs/TRUTHAN_UI_CONTROL.md`. Credentials, player names, and packet payloads are excluded from retained evidence.
+
+
+## Screen watcher repair (2026-09-25)
+
+Real-emulator evidence for the detached screen watcher, independent frame/OCR reporting, reconnect handling, safe UI observation and ADB fallback is recorded in docs/research/SCREEN_WATCH_REPAIR_20260925.md. The final 10m11s soak advanced frames at every 30-second sample, had a maximum frame age of 301 ms and separate maximum OCR age of 3.46 s, and showed no errors or reconnects after the atomic status-write retry. This does not resolve the existing post-auth port-19000 peer EOF/bootstrap blocker described in PROJECT_STATE.md.

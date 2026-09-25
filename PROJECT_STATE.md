@@ -1,5 +1,14 @@
 # Tru Than / 诛神OL Android 1.17 — Project State
 
+Latest tooling milestone (2026-09-25): screen watcher repair tested on the real
+Android emulator. Detached start/parent-exit behavior, continuous decode,
+separate frame/OCR freshness, bounded stream reconnect, safe UI observation,
+dimension/staleness tap guards, and ADB fallback were exercised. Final soak:
+10m11s / 21 samples, frame age max 301 ms, OCR age max 3.46 s, no errors or
+reconnects after the status-file retry fix, threads 50–54, private memory
+626–728 MB. Exact timeline and commands: `docs/research/SCREEN_WATCH_REPAIR_20260925.md`.
+This does not change the separate unfinished real-client bootstrap milestone.
+
 Last known stable baseline: **LocalServer v0.26**
 Current emphasis: **reverse real NPC/mob spawn + starter tutorial flow without guessing**
 
