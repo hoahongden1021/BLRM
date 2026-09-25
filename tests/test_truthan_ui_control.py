@@ -16,10 +16,11 @@ import truthan_ui_control as ui
 class ControllerTests(unittest.TestCase):
     def test_role_creation_requires_ui_and_packet_agreement(self):
         self.assertEqual(ui.role_action(0, 4, False, {}), "create")
+        self.assertEqual(ui.role_action(0, 4, False, {"existing_role_observed": True}), "create")
         self.assertEqual(ui.role_action(1, 3, True, {"attempted": True}), "enter")
         self.assertEqual(ui.role_action(None, 3, True, {}), "enter")
         for args in [(None, 4, False, {}), (0, 3, False, {}), (0, 4, False, {"attempted": True}),
-                     (1, 3, False, {})]:
+                     (0, 4, False, {"existing_role_observed": False}), (1, 3, False, {})]:
             with self.assertRaises(ui.Blocked):
                 ui.role_action(*args)
 
@@ -49,6 +50,13 @@ class ControllerTests(unittest.TestCase):
         self.assertEqual(ui.classify(items), "WORLD_HUD")
         readable_hud = [dict(text=text, score=.99) for text in ("\u804a\u5929", "\u753b\u8d28")]
         self.assertEqual(ui.classify(readable_hud), "WORLD_HUD")
+
+    def test_name_input_prompt_accepts_observed_ocr_confidence(self):
+        items = [dict(text="\u8f93\u5165\u89d2\u8272\u7684\u540d\u5b57\uff1a CodexU", score=.84),
+                 dict(text="\u786e\u5b9a", score=1.0)]
+        self.assertEqual(ui.classify(items), "NAME_INPUT")
+        items[0]["score"] = .79
+        self.assertEqual(ui.classify(items), "UNKNOWN")
 
     def test_session_identity_uses_process_start_time_without_wmi(self):
         value = {"server_pid": 1234, "started": 100.0, "server_creation": "/Date(100000)/"}
@@ -142,6 +150,60 @@ class ControllerTests(unittest.TestCase):
             self.assertIs(controller.observe(source="auto"),fallback)
         observe.assert_called_once_with(timeout=8.0,include_frame=True)
         adb_observe.assert_called_once_with()
+
+    def test_delayed_label_action_reobserves_and_recomputes_target(self):
+        controller=ui.Controller.__new__(ui.Controller)
+        label="ç™»å½•æ¸¸æˆ"
+        def item(x):
+            return {"text":label,"score":.99,
+                    "box":[[x,100],[x+40,100],[x+40,140],[x,140]]}
+        delayed={"source":"adb","captured":time.time(),"dimensions":[2992,1344],
+                 "items":[item(100)]}
+        fresh={"source":"adb","captured":time.time(),"dimensions":[2992,1344],
+               "items":[item(500)]}
+        tapped=[]
+        def tap(_obs,xy,_basis):
+            tapped.append(xy)
+            if len(tapped)==1:
+                raise ui.Blocked("Observation expired; obtain a fresh screenshot")
+            return "tap sent"
+        with patch.object(controller,"observe_adb",return_value=fresh) as adb_observe, \
+             patch.object(controller,"record"), patch.object(controller,"tap",side_effect=tap):
+            result=controller.tap_label(delayed,label)
+        self.assertEqual(result,"tap sent")
+        self.assertEqual(tapped,[[120,120],[520,120]])
+        adb_observe.assert_called_once_with()
+
+    def test_move_reobserves_and_rematches_after_pre_input_expiration(self):
+        controller=ui.Controller.__new__(ui.Controller)
+        now=time.time()*1000
+        before={"in_game":True,"dimensions":[2992,1344],"screenshot":"unused.png",
+                "runtime":{"game_connected":True,"updated_unix_ms":now-10000,
+                           "scene":{"id":9068},"player":{"id":100001,"x":180,"y":230}},
+                "screen":"WORLD_HUD","items":[]}
+        fresh={**before,"captured":time.time()}
+        after={"in_game":True,"runtime":{"game_connected":True,"updated_unix_ms":now+1000,
+                                          "scene":{"id":9068},"player":{"id":100001,"x":180,"y":238,
+                                                                          "position_source":"cmd133"}},
+               "screen":"WORLD_HUD","items":[]}
+        reads=[]
+        def action(*_args):
+            if not reads:
+                reads.append("expired")
+                raise ui.Blocked("Observation expired; obtain a fresh screenshot")
+            reads.append("sent")
+            return after
+        with patch.object(controller,"observe",side_effect=[before,fresh]) as observe, \
+             patch.object(controller,"match_down",side_effect=[(1.0,(500,1100)),(1.0,(510,1110))]) as match, \
+             patch("cv2.imread",return_value=SimpleNamespace(shape=(20,20))), \
+             patch.object(controller,"record") as record, \
+             patch.object(controller,"action",side_effect=action):
+            result=controller.move(600)
+        self.assertTrue(result["verified"])
+        self.assertEqual(reads,["expired","sent"])
+        self.assertEqual(observe.call_count,2)
+        self.assertEqual(match.call_count,2)
+        self.assertEqual(record.call_args_list[0].kwargs["event"],"movement_action_refresh")
 
     def test_dimension_mismatch_never_taps(self):
         controller=ui.Controller.__new__(ui.Controller)

@@ -63,6 +63,7 @@ def center(item):
 
 
 def classify(items):
+    normalize = lambda text: text.strip().replace("\uff1a", ":")
     texts = {i["text"].strip().replace("：", ":") for i in items if i["score"] >= .90}
     if texts & {"网络错误", "网络故障"}:
         return "NETWORK_ERROR"
@@ -75,6 +76,9 @@ def classify(items):
     if {"创建角色", "名字", "创建"} <= texts:
         return "CREATE_ROLE"
     if any("输入角色的名字" in s for s in texts) and "确定" in texts:
+        return "NAME_INPUT"
+    if any("\u8f93\u5165\u89d2\u8272\u7684\u540d\u5b57:" in normalize(i["text"]) and i["score"] >= .80
+           for i in items) and "\u786e\u5b9a" in texts:
         return "NAME_INPUT"
     if "DONE" in texts:
         return "NAME_IME"
@@ -141,10 +145,16 @@ def role_action(count, empty_slots, has_enter, creation_record):
     if has_enter:
         return "enter"
     if count == 0 and empty_slots == 4:
-        if creation_record:
+        # This marker records an existing role seen in an earlier runtime;
+        # it is not a role-creation attempt. Unknown ledger entries stay blocked.
+        if creation_record_blocks(creation_record):
             raise Blocked("Creation already attempted/observed; server may have reset. Refusing duplicate")
         return "create"
     raise Blocked("Role count/UI disagree or are unknown; refusing creation")
+
+
+def creation_record_blocks(record):
+    return bool(record) and record != {"existing_role_observed": True}
 
 
 def safe_observation(obs):
@@ -305,8 +315,11 @@ class Controller:
                     raise Blocked("Watcher frame/OCR is stale; obtain a fresh observation")
 
         require_fresh()
-        from truthan_screen_watch import _device_screen_size
-        if list(_device_screen_size()) != obs.get("dimensions"):
+        device_size = obs.get("device_size")
+        if device_size is None:
+            from truthan_screen_watch import _device_screen_size
+            device_size = list(_device_screen_size())
+        if list(device_size) != obs.get("dimensions"):
             raise Blocked("Device dimensions changed since observation; refusing tap")
         if not gui.current_focus()["truthan_foreground"]:
             raise Blocked("App lost foreground before input")
@@ -324,24 +337,34 @@ class Controller:
         return self.action(obs, ["shell", "input", "tap", *map(str, xy)], basis)
 
     def tap_label(self, obs, label, first=False):
-        now = time.time()
-        refresh = False
-        if obs.get("source") == "watcher":
-            frame_ts = obs.get("image_timestamp_epoch", obs["captured"])
-            ocr_ts = obs.get("ocr_timestamp_epoch", 0)
-            refresh = (obs.get("image_frame_id") != obs.get("frame_id")
-                       or (now-frame_ts)*1000 > 1000 or (now-ocr_ts)*1000 > 1500
-                       or now-obs["captured"] > 1.0)
+        for attempt in range(2):
+            now = time.time()
+            refresh = False
+            if obs.get("source") == "watcher":
+                frame_ts = obs.get("image_timestamp_epoch", obs["captured"])
+                ocr_ts = obs.get("ocr_timestamp_epoch", 0)
+                refresh = (obs.get("image_frame_id") != obs.get("frame_id")
+                           or (now-frame_ts)*1000 > 1000 or (now-ocr_ts)*1000 > 1500
+                           or now-obs["captured"] > 1.0)
+                if refresh:
+                    self.record(event="watcher_action_fallback", reason="observation expired before label tap",
+                                frame_id=obs.get("frame_id"), frame_timestamp_epoch=frame_ts,
+                                ocr_timestamp_epoch=ocr_ts)
+            elif now-obs["captured"] > 2.0:
+                refresh = True
+                self.record(event="adb_action_refresh", reason="screenshot/OCR aged before label tap")
             if refresh:
-                self.record(event="watcher_action_fallback", reason="observation expired before label tap",
-                            frame_id=obs.get("frame_id"), frame_timestamp_epoch=frame_ts,
-                            ocr_timestamp_epoch=ocr_ts)
-        elif now-obs["captured"] > 2.0:
-            refresh = True
-            self.record(event="adb_action_refresh", reason="screenshot/OCR aged before label tap")
-        if refresh:
-            obs = self.observe_adb()
-        return self.tap(obs, self.target(obs, label, first), "fresh native OCR box center: " + label)
+                obs = self.observe_adb()
+            try:
+                xy = self.target(obs, label, first)
+                return self.tap(obs, xy, "fresh native OCR box center: " + label)
+            except Blocked as error:
+                # OCR and trace work can consume the last part of the age window.
+                # Re-read and re-find the label once; never reuse old coordinates.
+                if attempt or str(error) != "Observation expired; obtain a fresh screenshot":
+                    raise
+                self.record(event="adb_action_refresh", reason="observation expired before input")
+                obs = self.observe_adb()
 
     def calibrated(self, obs, xy):
         if obs["dimensions"] != [2992, 1344]:
@@ -390,7 +413,7 @@ class Controller:
                 if obs["packets"].get("create_sent"):
                     raise Blocked("Creation request already sent; refusing repeat")
                 if typed:
-                    if not name_confirmed or read_json(LEDGER):
+                    if not name_confirmed or creation_record_blocks(read_json(LEDGER)):
                         raise Blocked("Name not confirmed this run or creation already recorded")
                     # Durable intent BEFORE input: a crash can never cause duplicate submission.
                     save_json(LEDGER, {"attempted": True, "started": self.started})
@@ -420,21 +443,30 @@ class Controller:
 
     def move(self, duration_ms):
         import cv2
-        obs = self.observe()
-        if not obs["in_game"]:
-            raise Blocked("Movement requires current HUD and current connection cmd10 proof")
-        if obs["dimensions"] != [2992, 1344]:
-            raise Blocked("Movement dimensions not calibrated")
-        # Match the arrow in this screenshot, not cached OCR or world coordinates.
-        image = cv2.imread(str(ROOT / obs["screenshot"]), cv2.IMREAD_GRAYSCALE)
-        template = cv2.imread(str(ROOT / "tools/ui_assets/dpad_down.png"), cv2.IMREAD_GRAYSCALE)
-        if template is None:
-            raise Blocked("Missing calibrated D-pad template")
-        score, point = self.match_down(image, template)
-        xy = [point[0] + template.shape[1]//2, point[1] + template.shape[0]//2]
-        action_ms = time.time() * 1000
-        after = self.action(obs, ["shell", "input", "touchscreen", "swipe", *map(str, xy), *map(str, xy), str(duration_ms)],
-                            f"fresh D-pad down template match score={score:.4f}; stationary hold")
+        for attempt in range(2):
+            obs = self.observe()
+            if not obs["in_game"]:
+                raise Blocked("Movement requires current HUD and current connection cmd10 proof")
+            if obs["dimensions"] != [2992, 1344]:
+                raise Blocked("Movement dimensions not calibrated")
+            # Match the arrow in this screenshot, not cached OCR or world coordinates.
+            image = cv2.imread(str(ROOT / obs["screenshot"]), cv2.IMREAD_GRAYSCALE)
+            template = cv2.imread(str(ROOT / "tools/ui_assets/dpad_down.png"), cv2.IMREAD_GRAYSCALE)
+            if template is None:
+                raise Blocked("Missing calibrated D-pad template")
+            score, point = self.match_down(image, template)
+            xy = [point[0] + template.shape[1]//2, point[1] + template.shape[0]//2]
+            action_ms = time.time() * 1000
+            try:
+                after = self.action(obs, ["shell", "input", "touchscreen", "swipe", *map(str, xy), *map(str, xy), str(duration_ms)],
+                                    f"fresh D-pad down template match score={score:.4f}; stationary hold")
+            except Blocked as error:
+                # A stale check rejects before input; rematch once on a new screenshot.
+                if attempt or str(error) != "Observation expired; obtain a fresh screenshot":
+                    raise
+                self.record(event="movement_action_refresh", reason="observation expired before input")
+                continue
+            break
         verified = after["in_game"] and movement_verified(obs["runtime"], after["runtime"], action_ms)
         result = {"verified": bool(verified), "before": safe_observation(obs), "after": safe_observation(after)}
         self.record(result="MOVEMENT_PASS" if verified else "MOVEMENT_FAILED", evidence=result)
