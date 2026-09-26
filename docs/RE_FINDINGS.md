@@ -371,3 +371,33 @@ body (the earlier note in `docs/PROTOCOL.md` said 18 and was corrected).
 `readSkillActionSEData` (`:13177`) and `readSpriteUpdateProperty` (`:13187`)
 give a complete static cmd137 reader. No cmd136 or cmd137 frame exists in any
 capture, so combat response stays `UNKNOWN`; nothing was fabricated.
+
+---
+
+## 2026-09-26: English test build (com.t4game.en) — UI text and asset sources
+
+Full record: `docs/research/EN_UI_TEST_BUILD.md`.
+
+- The four start-menu buttons are **baked images**, not text:
+  `login/botton1..6.png` (normal, 155x44) and `login/botton11..16.png`
+  (bright, 189x59) = 开始游戏 / 快速进入 / 快速注册 / 退出游戏 / 修复游戏 /
+  联网选择, selected by `AuthenticateCommon` (`imgBottonImage`,
+  `imgBrightBottonImage`). `开始游戏`, `快速进入` and `快速注册` appear in no
+  dex, arsc or `Language*.str` entry of the built APK, which is why text-only
+  translation could not change them. VERIFIED by byte search over the built APK
+  and by OCR of every image entry.
+- `sysui/t_m_menu_*.png` hold the same labels but are not drawn by the running
+  start menu; `mm4.png`/`mm5.png` (`imgMainMenuFont*`) are 608x15 strips with no
+  readable text.
+- **PNG colour type matters for this client.** Replacing `login/botton*.png`
+  with RGBA (colour type 6) output made the client block forever at
+  `读取中...100%`; re-saving the identical art as palette PNG (colour type 3,
+  per-index `tRNS`, as in the source) loads normally. VERIFIED by A/B rebuilds on
+  the real client. Any future asset replacement in this tree must keep the
+  original PNG colour type.
+- Installed-APK inspection (`adb shell pm path` + `adb pull`) confirms the built
+  assets really are the ones on device, so screenshot evidence is attributable
+  to the tested build.
+- Bilingual UI classification in `tools/truthan_ui_control.py` now matches
+  English screen states (start menu, login dialog, role list, role create) and
+  tolerates labels split by the detector; focused suite: 50 tests OK.

@@ -1,0 +1,747 @@
+English UI translation apply report
+============================================================
+mapping entries: 341
+
+smali files modified: 14
+  Language13.str: 1/100 entries translated
+  Language14.str: 11/100 entries translated
+  Language15.str: 12/100 entries translated
+  Language16.str: 5/100 entries translated
+  Language17.str: 1/100 entries translated
+  Language18.str: 1/100 entries translated
+  Language19.str: 4/100 entries translated
+  Language2.str: 5/100 entries translated
+  Language27.str: 1/100 entries translated
+  Language4.str: 1/100 entries translated
+  Language9.str: 2/100 entries translated
+
+manifest package/authority/label patched: False
+
+=== entries with NO hit anywhere (297) ===
+  确定 -> OK
+  返回 -> Back
+  取消 -> Cancel
+  选择 -> Select
+  完成 -> Done
+  '0'键快速查看 -> Press 0 to view
+  同意 -> Agree
+  不同意 -> Disagree
+  是 -> Yes
+  否 -> No
+  详情 -> Details
+  选择服务器 -> Select Server
+  进入 -> Enter
+  确认退出？ -> Confirm Exit?
+  确认 -> Confirm
+  退出 -> Exit
+  是否打开声音？ -> Enable sound?
+  网络故障，点击确定重新连接 -> Network error. Tap OK to reconnect
+  连接中请稍候... -> Connecting, please wait...
+  健 康 游 戏 忠 告 -> HEALTH GAME NOTICE
+  抵制不良游戏,拒绝盗版游戏. -> Reject poor games. Say no to piracy.
+  注意自我保护,谨防受骗上当 -> Protect yourself. Beware of scams.
+  适度游戏益脑,沉迷游戏伤身. -> Play in moderation. Overplaying harms health.
+  合理安排时间,享受健康生活. -> Manage your time. Enjoy a healthy life.
+  服务器 -> Server
+  角色 -> Role
+  状态 -> Status
+  网络故障，请重新登录 -> Network error. Please log in again.
+  网络状况不好正在寻找网络请等候 -> Poor network. Searching for signal, please wait...
+  网络错误，请您在联网方式中更改您的网络连接设置，CMWAP用户推荐选择WAP联网，UNINET用户请选择NET联网 -> Network error. Change your network mode: pick WAP for CMWAP, NET for UNINET.
+  移动用户请选择移动网，联通用户请选择联通网，“联网方式”可在“开始游戏”选项中进行手动更改！ -> China Mobile users pick Mobile; China Unicom users pick Unicom. You can change "Network mode" under "Start Game".
+  移动网 -> Mobile
+  联通网 -> Unicom
+  网络故障 -> Network Error
+  网络错误 -> Network Error
+  亲爱的玩家提醒您:游戏进行时需使用传输量若您尚未申请传输资费或是申请了低传输资费建议您依照自身游戏习惯申请合适的传输资费若欲改变传输资费可用手机直拨台哥大客服专线188 -> Dear player: gameplay uses mobile data. If you have no data plan, please pick one that fits your usage. To change your plan, dial carrier support at 188.
+  账号: -> Account:
+  账号： -> Account:
+  密码: -> Password:
+  密码： -> Password:
+  登录游戏 -> Log In
+  注册账号 -> Register
+  联网方式 -> Network Mode
+  修复游戏 -> Repair Game
+  官方网站 -> Official Site
+  个人中心 -> Account Center
+  修改密码 -> Change Password
+  保存用户密码 -> Save password
+  游戏关于 -> About
+  游戏帮助 -> Help
+  版本号： -> Version:
+  资源号： -> Resource:
+  版权声明： -> Copyright:
+  t4game出品，版权所有 -> Published by t4game. All rights reserved.
+  24小时客服电话： -> 24h support:
+  诛神官网： -> Official site:
+  查看 -> View
+  请点此查看协议详情 -> Tap here to read the agreement
+  您现在的网络连接方式为[ -> Your network mode is [
+  联网方式设置 -> Network settings
+  开始游戏 -> Start Game
+  角色列表 -> Role List
+  职业 -> Class
+  职业： -> Class:
+  性别 -> Gender
+  国家 -> Country
+  名字 -> Name
+  名称 -> Name
+  名称: -> Name:
+  名称： -> Name:
+  级别 -> Level
+  等级 -> Level
+  等级: -> Level:
+  等级： -> Level:
+  场景: -> Scene:
+  进入游戏 -> Enter Game
+  删除角色 -> Delete Role
+  创建角色 -> Create Role
+  修改名称 -> Rename
+  请输入： -> Enter:
+  输入角色的名字: -> Enter role name:
+  说明: -> Note:
+  角色名不能超过6个汉字或字符(包括数字、字母、下划线等) -> Role name: up to 6 Chinese characters, letters, digits or "_".
+  请输入角色的名字！ -> Please enter a role name!
+  请输入delete。 -> Type delete.
+  删除角色将无法寻回，请输入delete再确认。 -> Deleting a role is permanent. Type delete to confirm.
+  请输入6~16位高级密码 -> Enter a 6-16 character advanced password
+  为了您的账号安全，请您输入高级密码： -> For your security, enter your advanced password:
+  创建 -> Create
+  请输入delete -> Type delete
+  请输入高级密码 -> Enter advanced password
+  级 ->  Lv
+  角色已满！ -> All role slots are used!
+  您的名字不符合规范请先修改名称！ -> Invalid name. Please rename first.
+  网络中断！ -> Connection lost!
+  获取失败 -> Fetch failed
+  版本太低 -> Version too low
+  删除成功 -> Deleted
+  删除失败 -> Delete failed
+  角色名为空或超过长度限制是否重新修改角色？ -> Name is empty or too long. Rename the role?
+  角色名中有非法字符是否重新修改角色？ -> Name has invalid characters. Rename the role?
+  角色名已存在是否重新修改角色？ -> Name already exists. Rename the role?
+  修改角色名成功是否登录？ -> Renamed. Log in now?
+  角色名已存在，请另换一个！ -> Name already exists. Try another one!
+  创建失败 -> Create failed
+  该角色名不能注册，请另换一个！ -> This name is not allowed. Try another one!
+  名字可由字母、数字、汉字组成，最多不超过六个。 -> A name may use letters, digits or Chinese characters, up to 6 characters.
+  高级密码错误！ -> Wrong advanced password!
+  创建新角色 -> New Role
+  力士 -> Warrior
+  刺客 -> Assassin
+  唤雷师 -> Thundercaller
+  天师 -> Heavenly Master
+  武神 -> War God
+  圣仙 -> Saint
+  东国 -> East
+  南国 -> South
+  北国 -> North
+  装备打孔 -> Drill Socket
+  宝石镶嵌 -> Socket Gem
+  灵珠升级 -> Upgrade Orb
+  装备强化 -> Enhance Gear
+  合成材料升级 -> Upgrade Material
+  装备拆解 -> Salvage Gear
+  装备打造 -> Craft Gear
+  交谈 -> Talk
+  买卖武器 -> Buy/Sell Weapons
+  修理装备 -> Repair Gear
+  买卖药品 -> Buy/Sell Potions
+  买卖原料 -> Buy/Sell Materials
+  买卖杂物 -> Buy/Sell Misc
+  传送 -> Teleport
+  绑定复活点 -> Bind Respawn
+  我要买 -> I want to buy
+  我要卖 -> I want to sell
+  买彩票 -> Buy lottery
+  兑奖 -> Claim prize
+  进入副本 -> Enter dungeon
+  存取物品 -> Store/Withdraw
+  取出 -> Take Out
+  强化法宝 -> Enhance Artifact
+  解散帮派 -> Disband gang
+  新建帮派 -> Create gang
+  帮派管理 -> Gang Management
+  学习技能 -> Learn Skill
+  功勋兑换 -> Exchange Honor
+  国战报名 -> Sign up (nation war)
+  结婚 -> Marry
+  离婚 -> Divorce
+  帮战报名 -> Sign up (gang war)
+  断绝关系 -> End relation
+  拜师 -> Take master
+  收徒 -> Take apprentice
+  法宝存放 -> Store artifact
+  领取工资 -> Claim salary
+  工资记录 -> Salary record
+  工资说明 -> Salary help
+  购买保险 -> Buy insurance
+  领取红利 -> Claim bonus
+  保险说明 -> Insurance help
+  买卖防具 -> Buy/Sell Armor
+  买卖饰品 -> Buy/Sell Accessories
+  帮派建设 -> Gang building
+  逐出师门 -> Expel apprentice
+  叛师 -> Leave master
+  出师 -> Graduate
+  我的商品 -> My goods
+  寄存处 -> Deposit
+  等级奖励 -> Level reward
+  订婚 -> Engage
+  取消订婚 -> Cancel engagement
+  进入竞技场 -> Enter arena
+  进入战场 -> Enter battlefield
+  贩卖所有白装 -> Sell all white gear
+  开启跑环任务 -> Start ring quest
+  任务跳过 -> Skip quest
+  查看跑环任务 -> View ring quest
+  打孔符升级 -> Upgrade socket token
+  商店 -> Shop
+  领取/更换祝福 -> Claim/Change blessing
+  领取推荐人工资 -> Claim referral salary
+  登记推荐人 -> Register referrer
+  推荐人工资详单 -> Referral salary detail
+  可领取奖励条目 -> Claimable rewards
+  贩卖所有绿装 -> Sell all green gear
+  治疗 -> Heal
+  合服 -> Server merge
+  装备填孔 -> Fill socket
+  结义金兰 -> Sworn brothers
+  领取称号 -> Claim title
+  纳入新人 -> Recruit member
+  解除关系 -> End relation
+  普通发型店 -> Basic barber
+  精品发型店 -> Premium barber
+  宝石精炼 -> Refine gem
+  封神之战 -> War of Gods
+  霸主奖励 -> Overlord reward
+  背包物品 -> Inventory
+  物品 -> Items
+  装备 -> Equip
+  卸下 -> Unequip
+  使用 -> Use
+  移动 -> Move
+  丢弃 -> Discard
+  拆分 -> Split
+  整理 -> Tidy
+  升星 -> Star Up
+  升级 -> Upgrade
+  镶嵌 -> Inlay
+  注灵 -> Infuse
+  炼化 -> Refine
+  放入 -> Put Away
+  卖出 -> Sell
+  学习法术 -> Learn Spell
+  数量 -> Qty
+  时间 -> Time
+  技能列表 -> Skill List
+  普通攻击 -> Normal Attack
+  自定义攻击列表 -> Custom Attack List
+  自定义战斗 -> Custom Battle
+  确定提交？ -> Confirm submission?
+  战斗中不能退出游戏 -> You cannot exit during combat
+  宝物商店 -> Treasure Shop
+  VIP特权 -> VIP
+  人物属性 -> Attributes
+  天赋法术 -> Talents
+  任务明细 -> Quests
+  NPC导航 -> NPC Map
+  大地图 -> World Map
+  系统设置 -> Settings
+  帮助答疑 -> Help
+  便捷组队 -> Quick Party
+  小额充值 -> Small Top-up
+  大额充值 -> Large Top-up
+  法宝 -> Artifacts
+  坐骑 -> Mounts
+  八卦 -> Bagua
+  常规设定 -> General
+  设置按键 -> Key Bindings
+  安全锁 -> Security Lock
+  安全中心 -> Security Center
+  联系GM -> Contact GM
+  脱离卡死 -> Unstick
+  重选角色 -> Choose Role
+  退出游戏 -> Exit Game
+  属性 -> Attributes
+  称号 -> Titles
+  头衔 -> Ranks
+  个性 -> Style
+  VIP属性 -> VIP Stats
+  远程仓库 -> Remote Warehouse
+  自动吃药 -> Auto Potion
+  系统 -> System
+  聊天 -> Chat
+  显示 -> Display
+  基础 -> Base
+  战斗 -> Combat
+  荣誉 -> Honor
+  好友 -> Friends
+  师门 -> Master
+  夫妻 -> Spouse
+  结义 -> Sworn
+  帮派 -> Gang
+  黑名单 -> Blacklist
+  恩怨榜 -> Grudges
+  私聊 -> Whisper
+  悄悄话 -> Whisper
+  交易 -> Trade
+  加为好友 -> Add Friend
+  添加好友 -> Add Friend
+  邀请组队 -> Invite Party
+  组队邀请 -> Party Invite
+  强制攻击 -> Force Attack
+  加入黑名单 -> Block
+  踢出队伍 -> Kick
+  转让队长 -> Pass Leader
+  解散队伍 -> Disband Party
+  移出队伍 -> Remove from Party
+  委任队长 -> Appoint Leader
+  离开队伍 -> Leave Party
+  帮派邀请 -> Gang Invite
+  切磋 -> Sparring
+  删除 -> Delete
+  邮件 -> Mail
+  添加怨家 -> Add Grudge
+  查看怨家 -> View Grudges
+  追踪怨家 -> Track Grudge
+  删除怨家 -> Remove Grudge
+  清除列表 -> Clear List
+  金兰邀请 -> Sworn Invite
+  寻找金兰 -> Find Sworn
+  查看装备 -> View Gear
+  查看法宝 -> View Artifact
+  师门问候 -> Greet Master
+  师门召唤 -> Summon Master
+  恭喜您注册成功！ 账号： -> Registration successful! Account:
+  为保证帐号安全，请尽快绑定高密 -> For account security, please bind an advanced password soon.
+
+=== per-entry hits ===
+级                        =>  Lv                          smali=0 lang=0
+0.返回                     => 0. Back                      smali=11 lang=1
+      smali: smali\com\t4game\GameScreen.smali:6496, smali\com\t4game\GameScreen.smali:6516, smali\com\t4game\GameScreen.smali:6536, smali\com\t4game\GameScreen.smali:6552, smali\com\t4game\GameScreen.smali:6568, smali\com\t4game\GameScreen.smali:6600, smali\com\t4game\GameScreen.smali:6626, smali\com\t4game\GameScreen.smali:6638, smali\com\t4game\GameScreen.smali:87756, smali\com\t4game\GameScreen.smali:87779, smali\com\t4game\UI_Menu.smali:714
+      lang : Language16.str[92]
+24小时客服电话：                => 24h support:                 smali=0 lang=0
+名字可由字母、数字、汉字组成，最多不超过六个。  => A name may use letters, digits or Chinese characters, up to 6 characters. smali=0 lang=0
+已有角色登陆                   => A role is already logged in  smali=2 lang=1
+      smali: smali\com\t4game\GameWorld.smali:36795, smali\com\t4game\GameWorld.smali:36802
+      lang : Language9.str[65]
+游戏关于                     => About                        smali=0 lang=0
+个人中心                     => Account Center               smali=0 lang=0
+账号和密码的长度为6～16位。          => Account and password must be 6-16 characters. smali=2 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:705, smali\com\t4game\FormContr.smali:8245
+      lang : Language2.str[89]
+账号不能为空                   => Account cannot be empty      smali=11 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:452, smali\com\t4game\AuthenticateForm.smali:612, smali\com\t4game\AuthenticateForm.smali:996, smali\com\t4game\AuthenticateForm.smali:1211, smali\com\t4game\AuthenticateForm.smali:1391, smali\com\t4game\AuthenticateForm.smali:1451, smali\com\t4game\AuthenticateForm.smali:1624, smali\com\t4game\AuthenticateForm.smali:1695, smali\com\t4game\AuthenticateForm.smali:1827, smali\com\t4game\AuthenticateForm.smali:1904, smali\com\t4game\AuthenticateForm.smali:2030
+      lang : Language16.str[9]
+账号:                      => Account:                     smali=0 lang=0
+账号：                      => Account:                     smali=0 lang=0
+加为好友                     => Add Friend                   smali=0 lang=0
+添加好友                     => Add Friend                   smali=0 lang=0
+添加怨家                     => Add Grudge                   smali=0 lang=0
+高级密码不能为空                 => Advanced password cannot be empty smali=4 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:1470, smali\com\t4game\AuthenticateForm.smali:1714, smali\com\t4game\AuthenticateForm.smali:1846, smali\com\t4game\AuthenticateForm.smali:1942
+      lang : Language16.str[6]
+同意                       => Agree                        smali=0 lang=0
+角色已满！                    => All role slots are used!     smali=0 lang=0
+委任队长                     => Appoint Leader               smali=0 lang=0
+你确定要删除吗？                 => Are you sure you want to delete? smali=3 lang=1
+      smali: smali\com\t4game\Gang.smali:1462, smali\com\t4game\Gang.smali:3530, smali\com\t4game\Gang.smali:3744
+      lang : Language13.str[66]
+法宝                       => Artifacts                    smali=0 lang=0
+刺客                       => Assassin                     smali=0 lang=0
+人物属性                     => Attributes                   smali=0 lang=0
+属性                       => Attributes                   smali=0 lang=0
+自动吃药                     => Auto Potion                  smali=0 lang=0
+通畅                       => Available                    smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:2840
+      lang : Language14.str[29]
+返回                       => Back                         smali=0 lang=0
+八卦                       => Bagua                        smali=0 lang=0
+基础                       => Base                         smali=0 lang=0
+普通发型店                    => Basic barber                 smali=0 lang=0
+绑定复活点                    => Bind Respawn                 smali=0 lang=0
+黑名单                      => Blacklist                    smali=0 lang=0
+加入黑名单                    => Block                        smali=0 lang=0
+繁忙                       => Busy                         smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:2848
+      lang : Language14.str[31]
+购买保险                     => Buy insurance                smali=0 lang=0
+买彩票                      => Buy lottery                  smali=0 lang=0
+买卖饰品                     => Buy/Sell Accessories         smali=0 lang=0
+买卖防具                     => Buy/Sell Armor               smali=0 lang=0
+买卖原料                     => Buy/Sell Materials           smali=0 lang=0
+买卖杂物                     => Buy/Sell Misc                smali=0 lang=0
+买卖药品                     => Buy/Sell Potions             smali=0 lang=0
+买卖武器                     => Buy/Sell Weapons             smali=0 lang=0
+取消                       => Cancel                       smali=0 lang=0
+取消订婚                     => Cancel engagement            smali=0 lang=0
+修改密码                     => Change Password              smali=0 lang=0
+聊天                       => Chat                         smali=0 lang=0
+移动用户请选择移动网，联通用户请选择联通网，“联网方式”可在“开始游戏”选项中进行手动更改！ => China Mobile users pick Mobile; China Unicom users pick Unicom. You can change "Network mode" under "Start Game". smali=0 lang=0
+重选角色                     => Choose Role                  smali=0 lang=0
+领取红利                     => Claim bonus                  smali=0 lang=0
+兑奖                       => Claim prize                  smali=0 lang=0
+领取推荐人工资                  => Claim referral salary        smali=0 lang=0
+领取工资                     => Claim salary                 smali=0 lang=0
+领取称号                     => Claim title                  smali=0 lang=0
+领取/更换祝福                  => Claim/Change blessing        smali=0 lang=0
+可领取奖励条目                  => Claimable rewards            smali=0 lang=0
+职业                       => Class                        smali=0 lang=0
+职业：                      => Class:                       smali=0 lang=0
+清除列表                     => Clear List                   smali=0 lang=0
+战斗                       => Combat                       smali=0 lang=0
+确认                       => Confirm                      smali=0 lang=0
+确认退出？                    => Confirm Exit?                smali=0 lang=0
+确定提交？                    => Confirm submission?          smali=0 lang=0
+连接中请稍候...                => Connecting, please wait...   smali=0 lang=0
+网络中断！                    => Connection lost!             smali=0 lang=0
+联系GM                     => Contact GM                   smali=0 lang=0
+版权声明：                    => Copyright:                   smali=0 lang=0
+国家                       => Country                      smali=0 lang=0
+装备打造                     => Craft Gear                   smali=0 lang=0
+创建                       => Create                       smali=0 lang=0
+创建角色                     => Create Role                  smali=0 lang=0
+创建失败                     => Create failed                smali=0 lang=0
+新建帮派                     => Create gang                  smali=0 lang=0
+自定义攻击列表                  => Custom Attack List           smali=0 lang=0
+自定义战斗                    => Custom Battle                smali=0 lang=0
+亲爱的玩家提醒您:游戏进行时需使用传输量若您尚未申请传输资费或是申请了低传输资费建议您依照自身游戏习惯申请合适的传输资费若欲改变传输资费可用手机直拨台哥大客服专线188 => Dear player: gameplay uses mobile data. If you have no data plan, please pick one that fits your usage. To change your plan, dial carrier support at 188. smali=0 lang=0
+删除                       => Delete                       smali=0 lang=0
+删除角色                     => Delete Role                  smali=0 lang=0
+删除失败                     => Delete failed                smali=0 lang=0
+删除成功                     => Deleted                      smali=0 lang=0
+删除角色将无法寻回，请输入delete再确认。  => Deleting a role is permanent. Type delete to confirm. smali=0 lang=0
+寄存处                      => Deposit                      smali=0 lang=0
+详情                       => Details                      smali=0 lang=0
+不同意                      => Disagree                     smali=0 lang=0
+解散队伍                     => Disband Party                smali=0 lang=0
+解散帮派                     => Disband gang                 smali=0 lang=0
+丢弃                       => Discard                      smali=0 lang=0
+显示                       => Display                      smali=0 lang=0
+离婚                       => Divorce                      smali=0 lang=0
+完成                       => Done                         smali=0 lang=0
+下载                       => Download                     smali=3 lang=1
+      smali: smali\com\t4game\T4game.smali:413, smali\com\t4game\T4game.smali:459, smali\com\t4game\T4game.smali:516
+      lang : Language14.str[82]
+装备打孔                     => Drill Socket                 smali=0 lang=0
+东国                       => East                         smali=0 lang=0
+是否打开声音？                  => Enable sound?                smali=0 lang=0
+断绝关系                     => End relation                 smali=0 lang=0
+解除关系                     => End relation                 smali=0 lang=0
+订婚                       => Engage                       smali=0 lang=0
+强化法宝                     => Enhance Artifact             smali=0 lang=0
+装备强化                     => Enhance Gear                 smali=0 lang=0
+进入                       => Enter                        smali=0 lang=0
+进入游戏                     => Enter Game                   smali=0 lang=0
+请输入6~16位高级密码             => Enter a 6-16 character advanced password smali=0 lang=0
+请输入！                     => Enter a value!               smali=7 lang=2
+      smali: smali\com\t4game\FormContr.smali:5540, smali\com\t4game\FormContr.smali:6117, smali\com\t4game\FormContr.smali:6381, smali\com\t4game\FormContr.smali:6427, smali\com\t4game\FormContr.smali:6475, smali\com\t4game\FormContr.smali:6519, smali\com\t4game\FormContr.smali:6559
+      lang : Language19.str[89], Language2.str[77]
+请输入账号：                   => Enter account:               smali=16 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:2302, smali\com\t4game\AuthenticateForm.smali:2383, smali\com\t4game\AuthenticateForm.smali:2529, smali\com\t4game\AuthenticateForm.smali:2622, smali\com\t4game\AuthenticateForm.smali:2687, smali\com\t4game\AuthenticateForm.smali:2770, smali\com\t4game\AuthenticateForm.smali:2821, smali\com\t4game\AuthenticateForm.smali:2904, smali\com\t4game\AuthenticateForm.smali:2955, smali\com\t4game\AuthenticateForm.smali:3084, smali\com\t4game\AuthenticateForm.smali:3137, smali\com\t4game\AuthenticateForm.smali:3216 ...
+      lang : Language15.str[75]
+请输入高级密码                  => Enter advanced password      smali=0 lang=0
+请输入高级密码：                 => Enter advanced password:     smali=8 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:2699, smali\com\t4game\AuthenticateForm.smali:2782, smali\com\t4game\AuthenticateForm.smali:2833, smali\com\t4game\AuthenticateForm.smali:2916, smali\com\t4game\AuthenticateForm.smali:2977, smali\com\t4game\AuthenticateForm.smali:3159, smali\com\t4game\FormContr.smali:2733, smali\com\t4game\FormContr.smali:5299
+      lang : Language15.str[69]
+进入竞技场                    => Enter arena                  smali=0 lang=0
+进入战场                     => Enter battlefield            smali=0 lang=0
+进入副本                     => Enter dungeon                smali=0 lang=0
+请输入密码：                   => Enter password:              smali=5 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:2318, smali\com\t4game\AuthenticateForm.smali:2393, smali\com\t4game\AuthenticateForm.smali:2967, smali\com\t4game\AuthenticateForm.smali:3149, smali\com\t4game\FormContr.smali:2498
+      lang : Language15.str[68]
+输入角色的名字:                 => Enter role name:             smali=0 lang=0
+请输入：                     => Enter:                       smali=0 lang=0
+装备                       => Equip                        smali=0 lang=0
+功勋兑换                     => Exchange Honor               smali=0 lang=0
+退出                       => Exit                         smali=0 lang=0
+退出游戏                     => Exit Game                    smali=0 lang=0
+逐出师门                     => Expel apprentice             smali=0 lang=0
+获取失败                     => Fetch failed                 smali=0 lang=0
+装备填孔                     => Fill socket                  smali=0 lang=0
+寻找金兰                     => Find Sworn                   smali=0 lang=0
+为保证帐号安全，                 => For account security,        smali=2 lang=1
+      smali: smali\com\t4game\T4game.smali:2483, smali\com\t4game\T4game.smali:2571
+      lang : Language19.str[41]
+为保证帐号安全，请尽快绑定高密          => For account security, please bind an advanced password soon. smali=0 lang=0
+为了您的账号安全，请您输入高级密码：       => For your security, enter your advanced password: smali=0 lang=0
+强制攻击                     => Force Attack                 smali=0 lang=0
+好友                       => Friends                      smali=0 lang=0
+满员                       => Full                         smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:2852
+      lang : Language14.str[32]
+已经成功修复游戏                 => Game repaired successfully   smali=2 lang=1
+      smali: smali\com\t4game\T4game$1.smali:44, smali\com\t4game\T4game$2.smali:44
+      lang : Language14.str[68]
+帮派                       => Gang                         smali=0 lang=0
+帮派邀请                     => Gang Invite                  smali=0 lang=0
+帮派管理                     => Gang Management              smali=0 lang=0
+帮派建设                     => Gang building                smali=0 lang=0
+性别                       => Gender                       smali=0 lang=0
+常规设定                     => General                      smali=0 lang=0
+出师                       => Graduate                     smali=0 lang=0
+师门问候                     => Greet Master                 smali=0 lang=0
+恩怨榜                      => Grudges                      smali=0 lang=0
+健 康 游 戏 忠 告              => HEALTH GAME NOTICE           smali=0 lang=0
+治疗                       => Heal                         smali=0 lang=0
+天师                       => Heavenly Master              smali=0 lang=0
+游戏帮助                     => Help                         smali=0 lang=0
+帮助答疑                     => Help                         smali=0 lang=0
+荣誉                       => Honor                        smali=0 lang=0
+我要买                      => I want to buy                smali=0 lang=0
+我要卖                      => I want to sell               smali=0 lang=0
+注灵                       => Infuse                       smali=0 lang=0
+镶嵌                       => Inlay                        smali=0 lang=0
+保险说明                     => Insurance help               smali=0 lang=0
+非法字符，账号和密码只能为数字和英文组合。    => Invalid characters. Account and password may only contain letters and digits. smali=2 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:685, smali\com\t4game\AuthenticateForm.smali:1329
+      lang : Language15.str[93]
+非法字符，用户名和密码只能为数字和英文组合。   => Invalid characters. Username and password may only contain letters and digits. smali=5 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:534, smali\com\t4game\AuthenticateForm.smali:918, smali\com\t4game\AuthenticateForm.smali:1101, smali\com\t4game\FormContr.smali:8574, smali\com\t4game\RechargeForm.smali:674
+      lang : Language15.str[86]
+输入非法，请重新输入！              => Invalid input. Please try again. smali=3 lang=1
+      smali: smali\com\t4game\FormContr.smali:6729, smali\com\t4game\FormContr.smali:6766, smali\com\t4game\FormContr.smali:7274
+      lang : Language2.str[82]
+您的名字不符合规范请先修改名称！         => Invalid name. Please rename first. smali=0 lang=0
+背包物品                     => Inventory                    smali=0 lang=0
+邀请组队                     => Invite Party                 smali=0 lang=0
+物品                       => Items                        smali=0 lang=0
+设置按键                     => Key Bindings                 smali=0 lang=0
+踢出队伍                     => Kick                         smali=0 lang=0
+大额充值                     => Large Top-up                 smali=0 lang=0
+学习技能                     => Learn Skill                  smali=0 lang=0
+学习法术                     => Learn Spell                  smali=0 lang=0
+离开队伍                     => Leave Party                  smali=0 lang=0
+叛师                       => Leave master                 smali=0 lang=0
+级别                       => Level                        smali=0 lang=0
+等级                       => Level                        smali=0 lang=0
+等级奖励                     => Level reward                 smali=0 lang=0
+等级:                      => Level:                       smali=0 lang=0
+等级：                      => Level:                       smali=0 lang=0
+读取中...                   => Loading...                   smali=2 lang=1
+      smali: smali\com\t4game\DraftingUtil.smali:8579, smali\com\t4game\GameScreen.smali:98865
+      lang : Language17.str[0]
+登录游戏                     => Log In                       smali=0 lang=0
+邮件                       => Mail                         smali=0 lang=0
+维护                       => Maintenance                  smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:2856
+      lang : Language14.str[33]
+合理安排时间,享受健康生活.           => Manage your time. Enjoy a healthy life. smali=0 lang=0
+结婚                       => Marry                        smali=0 lang=0
+师门                       => Master                       smali=0 lang=0
+移动网                      => Mobile                       smali=0 lang=0
+坐骑                       => Mounts                       smali=0 lang=0
+移动                       => Move                         smali=0 lang=0
+我的商品                     => My goods                     smali=0 lang=0
+NPC导航                    => NPC Map                      smali=0 lang=0
+名字                       => Name                         smali=0 lang=0
+名称                       => Name                         smali=0 lang=0
+角色名已存在是否重新修改角色？          => Name already exists. Rename the role? smali=0 lang=0
+角色名已存在，请另换一个！            => Name already exists. Try another one! smali=0 lang=0
+角色名中有非法字符是否重新修改角色？       => Name has invalid characters. Rename the role? smali=0 lang=0
+角色名为空或超过长度限制是否重新修改角色？    => Name is empty or too long. Rename the role? smali=0 lang=0
+名称:                      => Name:                        smali=0 lang=0
+名称：                      => Name:                        smali=0 lang=0
+网络故障                     => Network Error                smali=0 lang=0
+网络错误                     => Network Error                smali=0 lang=0
+联网方式                     => Network Mode                 smali=0 lang=0
+网络错误，请您在联网方式中更改您的网络连接设置，CMWAP用户推荐选择WAP联网，UNINET用户请选择NET联网 => Network error. Change your network mode: pick WAP for CMWAP, NET for UNINET. smali=0 lang=0
+网络故障，请重新登录               => Network error. Please log in again. smali=0 lang=0
+网络错误，请重新登录               => Network error. Please log in again. smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:576
+      lang : Language27.str[28]
+网络故障，点击确定重新连接            => Network error. Tap OK to reconnect smali=0 lang=0
+联网方式设置                   => Network settings             smali=0 lang=0
+联网方式设置成功，是否继续            => Network settings saved. Continue? smali=2 lang=1
+      smali: smali\com\t4game\T4game.smali:760, smali\com\t4game\T4game.smali:1337
+      lang : Language15.str[14]
+创建新角色                    => New Role                     smali=0 lang=0
+否                        => No                           smali=0 lang=0
+普通攻击                     => Normal Attack                smali=0 lang=0
+北国                       => North                        smali=0 lang=0
+说明:                      => Note:                        smali=0 lang=0
+提示                       => Notice                       smali=5 lang=0
+      smali: smali\com\t4game\T4gameRecharge$1.smali:97, smali\j2ab\android\app\AliPayHandler.smali:99, smali\j2ab\android\app\J2ABMIDletActivity$3.smali:38, smali\j2ab\android\app\J2ABMIDletActivity$3.smali:138, smali\j2ab\android\app\J2ABMIDletActivity$3.smali:168
+确定                       => OK                           smali=0 lang=0
+官方网站                     => Official Site                smali=0 lang=0
+诛神官网：                    => Official site:               smali=0 lang=0
+霸主奖励                     => Overlord reward              smali=0 lang=0
+组队邀请                     => Party Invite                 smali=0 lang=0
+转让队长                     => Pass Leader                  smali=0 lang=0
+密码不能为空                   => Password cannot be empty     smali=3 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:644, smali\com\t4game\AuthenticateForm.smali:1015, smali\com\t4game\AuthenticateForm.smali:1923
+      lang : Language16.str[5]
+密码:                      => Password:                    smali=0 lang=0
+密码：                      => Password:                    smali=0 lang=0
+适度游戏益脑,沉迷游戏伤身.           => Play in moderation. Overplaying harms health. smali=0 lang=0
+请尽快绑定高密                  => Please bind an advanced password soon. smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:2583
+      lang : Language19.str[82]
+请尽快修改密码。                 => Please change your password soon. smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:2495
+      lang : Language19.str[42]
+请确认您的账号和密码，只能由6~16位数字或字母组成。 => Please check your account and password: 6-16 letters or digits only. smali=3 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:2336, smali\com\t4game\AuthenticateForm.smali:2496, smali\com\t4game\AuthenticateForm.smali:2573
+      lang : Language15.str[42]
+请输入角色的名字！                => Please enter a role name!    smali=0 lang=0
+请输入用户名和密码                => Please enter a username and password smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:1067
+      lang : Language14.str[65]
+请确保输入值大于0。               => Please enter a value greater than 0. smali=5 lang=1
+      smali: smali\com\t4game\FormContr.smali:8829, smali\com\t4game\RechargeForm.smali:563, smali\com\t4game\RechargeForm.smali:621, smali\com\t4game\RechargeForm.smali:815, smali\com\t4game\RechargeForm.smali:876
+      lang : Language2.str[94]
+网络状况不好正在寻找网络请等候          => Poor network. Searching for signal, please wait... smali=0 lang=0
+火爆                       => Popular                      smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:2844
+      lang : Language14.str[30]
+精品发型店                    => Premium barber               smali=0 lang=0
+'0'键快速查看                 => Press 0 to view              smali=0 lang=0
+点击中键进入游戏                 => Press the center key to enter the game smali=2 lang=1
+      smali: smali\com\t4game\T4game.smali:2507, smali\com\t4game\T4game.smali:2595
+      lang : Language18.str[45]
+注意自我保护,谨防受骗上当            => Protect yourself. Beware of scams. smali=0 lang=0
+t4game出品，版权所有            => Published by t4game. All rights reserved. smali=0 lang=0
+放入                       => Put Away                     smali=0 lang=0
+数量                       => Qty                          smali=0 lang=0
+任务明细                     => Quests                       smali=0 lang=0
+便捷组队                     => Quick Party                  smali=0 lang=0
+头衔                       => Ranks                        smali=0 lang=0
+密码找回                     => Recover Password             smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:5104
+      lang : Language15.str[30]
+纳入新人                     => Recruit member               smali=0 lang=0
+推荐人工资详单                  => Referral salary detail       smali=0 lang=0
+炼化                       => Refine                       smali=0 lang=0
+宝石精炼                     => Refine gem                   smali=0 lang=0
+注册账号                     => Register                     smali=0 lang=0
+登记推荐人                    => Register referrer            smali=0 lang=0
+恭喜您注册成功！ 账号：             => Registration successful! Account: smali=0 lang=0
+抵制不良游戏,拒绝盗版游戏.           => Reject poor games. Say no to piracy. smali=0 lang=0
+远程仓库                     => Remote Warehouse             smali=0 lang=0
+删除怨家                     => Remove Grudge                smali=0 lang=0
+移出队伍                     => Remove from Party            smali=0 lang=0
+修改名称                     => Rename                       smali=0 lang=0
+修改角色名成功是否登录？             => Renamed. Log in now?         smali=0 lang=0
+修复游戏                     => Repair Game                  smali=0 lang=0
+修理装备                     => Repair Gear                  smali=0 lang=0
+修复中请稍候...                => Repairing, please wait...    smali=2 lang=1
+      smali: smali\com\t4game\T4game.smali:1140, smali\com\t4game\T4game.smali:1251
+      lang : Language14.str[43]
+请求已经发送！                  => Request sent!                smali=5 lang=1
+      smali: smali\com\t4game\GameScreen.smali:108998, smali\com\t4game\GameScreen.smali:156904, smali\com\t4game\GameScreen.smali:157010, smali\com\t4game\GameScreen.smali:157080, smali\com\t4game\GameScreen.smali:157140
+      lang : Language4.str[55]
+资源号：                     => Resource:                    smali=0 lang=0
+角色                       => Role                         smali=0 lang=0
+角色列表                     => Role List                    smali=0 lang=0
+角色名不能超过6个汉字或字符(包括数字、字母、下划线等) => Role name: up to 6 Chinese characters, letters, digits or "_". smali=0 lang=0
+圣仙                       => Saint                        smali=0 lang=0
+工资说明                     => Salary help                  smali=0 lang=0
+工资记录                     => Salary record                smali=0 lang=0
+装备拆解                     => Salvage Gear                 smali=0 lang=0
+保存用户密码                   => Save password                smali=0 lang=0
+场景:                      => Scene:                       smali=0 lang=0
+安全中心                     => Security Center              smali=0 lang=0
+安全锁                      => Security Lock                smali=0 lang=0
+选择                       => Select                       smali=0 lang=0
+选择服务器                    => Select Server                smali=0 lang=0
+卖出                       => Sell                         smali=0 lang=0
+贩卖所有绿装                   => Sell all green gear          smali=0 lang=0
+贩卖所有白装                   => Sell all white gear          smali=0 lang=0
+服务器                      => Server                       smali=0 lang=0
+合服                       => Server merge                 smali=0 lang=0
+系统设置                     => Settings                     smali=0 lang=0
+商店                       => Shop                         smali=0 lang=0
+帮战报名                     => Sign up (gang war)           smali=0 lang=0
+国战报名                     => Sign up (nation war)         smali=0 lang=0
+技能列表                     => Skill List                   smali=0 lang=0
+任务跳过                     => Skip quest                   smali=0 lang=0
+小额充值                     => Small Top-up                 smali=0 lang=0
+宝石镶嵌                     => Socket Gem                   smali=0 lang=0
+南国                       => South                        smali=0 lang=0
+切磋                       => Sparring                     smali=0 lang=0
+拆分                       => Split                        smali=0 lang=0
+夫妻                       => Spouse                       smali=0 lang=0
+升星                       => Star Up                      smali=0 lang=0
+开始游戏                     => Start Game                   smali=0 lang=0
+开启跑环任务                   => Start ring quest             smali=0 lang=0
+状态                       => Status                       smali=0 lang=0
+法宝存放                     => Store artifact               smali=0 lang=0
+存取物品                     => Store/Withdraw               smali=0 lang=0
+个性                       => Style                        smali=0 lang=0
+师门召唤                     => Summon Master                smali=0 lang=0
+结义                       => Sworn                        smali=0 lang=0
+金兰邀请                     => Sworn Invite                 smali=0 lang=0
+结义金兰                     => Sworn brothers               smali=0 lang=0
+系统                       => System                       smali=0 lang=0
+取出                       => Take Out                     smali=0 lang=0
+收徒                       => Take apprentice              smali=0 lang=0
+拜师                       => Take master                  smali=0 lang=0
+天赋法术                     => Talents                      smali=0 lang=0
+交谈                       => Talk                         smali=0 lang=0
+请点此查看协议详情                => Tap here to read the agreement smali=0 lang=0
+传送                       => Teleport                     smali=0 lang=0
+两次输入的密码不一致！              => The two passwords do not match! smali=1 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:870
+      lang : Language15.str[80]
+两次输入的密码不一致。              => The two passwords do not match. smali=1 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:657
+      lang : Language15.str[77]
+输入不能小于0，请重新输入！           => The value cannot be below 0. Please try again. smali=8 lang=1
+      smali: smali\com\t4game\FormContr.smali:7253, smali\com\t4game\FormContr.smali:7379, smali\com\t4game\FormContr.smali:7462, smali\com\t4game\FormContr.smali:7545, smali\com\t4game\FormContr.smali:7628, smali\com\t4game\FormContr.smali:7711, smali\com\t4game\FormContr.smali:7816, smali\com\t4game\FormContr.smali:9269
+      lang : Language2.str[83]
+该角色名不能注册，请另换一个！          => This name is not allowed. Try another one! smali=0 lang=0
+唤雷师                      => Thundercaller                smali=0 lang=0
+整理                       => Tidy                         smali=0 lang=0
+时间                       => Time                         smali=0 lang=0
+称号                       => Titles                       smali=0 lang=0
+追踪怨家                     => Track Grudge                 smali=0 lang=0
+交易                       => Trade                        smali=0 lang=0
+宝物商店                     => Treasure Shop                smali=0 lang=0
+请输入delete                => Type delete                  smali=0 lang=0
+请输入delete。               => Type delete.                 smali=0 lang=0
+卸下                       => Unequip                      smali=0 lang=0
+联通网                      => Unicom                       smali=0 lang=0
+脱离卡死                     => Unstick                      smali=0 lang=0
+升级                       => Upgrade                      smali=0 lang=0
+合成材料升级                   => Upgrade Material             smali=0 lang=0
+灵珠升级                     => Upgrade Orb                  smali=0 lang=0
+打孔符升级                    => Upgrade socket token         smali=0 lang=0
+使用                       => Use                          smali=0 lang=0
+用户登录                     => User Login                   smali=1 lang=1
+      smali: smali\com\t4game\T4game.smali:1021
+      lang : Language14.str[44]
+用户名和密码不能为空               => Username and password cannot be empty smali=3 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:506, smali\com\t4game\AuthenticateForm.smali:857, smali\com\t4game\FormContr.smali:8498
+      lang : Language15.str[85]
+用户名和密码的长度为6～16           => Username and password must be 6-16 characters smali=4 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:554, smali\com\t4game\AuthenticateForm.smali:944, smali\com\t4game\AuthenticateForm.smali:1766, smali\com\t4game\FormContr.smali:8642
+      lang : Language16.str[3]
+用户名和密码的长度为6～16。          => Username and password must be 6-16 characters. smali=1 lang=1
+      smali: smali\com\t4game\AuthenticateForm.smali:1133
+      lang : Language15.str[87]
+VIP特权                    => VIP                          smali=0 lang=0
+VIP属性                    => VIP Stats                    smali=0 lang=0
+验证中请稍候...                => Verifying, please wait...    smali=2 lang=1
+      smali: smali\com\t4game\GameScreen.smali:11424, smali\com\t4game\GameScreen.smali:11479
+      lang : Language14.str[53]
+版本太低                     => Version too low              smali=0 lang=0
+版本号：                     => Version:                     smali=0 lang=0
+查看                       => View                         smali=0 lang=0
+查看法宝                     => View Artifact                smali=0 lang=0
+查看装备                     => View Gear                    smali=0 lang=0
+查看怨家                     => View Grudges                 smali=0 lang=0
+查看跑环任务                   => View ring quest              smali=0 lang=0
+武神                       => War God                      smali=0 lang=0
+封神之战                     => War of Gods                  smali=0 lang=0
+力士                       => Warrior                      smali=0 lang=0
+私聊                       => Whisper                      smali=0 lang=0
+悄悄话                      => Whisper                      smali=0 lang=0
+大地图                      => World Map                    smali=0 lang=0
+高级密码错误！                  => Wrong advanced password!     smali=0 lang=0
+用户名密码错误                  => Wrong username or password   smali=2 lang=1
+      smali: smali\com\t4game\GameWorld.smali:36753, smali\com\t4game\GameWorld.smali:36760
+      lang : Language9.str[62]
+是                        => Yes                          smali=0 lang=0
+战斗中不能退出游戏                => You cannot exit during combat smali=0 lang=0
+您现在的网络连接方式为[             => Your network mode is [       smali=0 lang=0

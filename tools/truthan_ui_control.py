@@ -27,6 +27,53 @@ LABELS = {"开始游戏", "修复游戏", "退出游戏", "登录游戏", "注�
           "DONE", "画质", "聊天", "社交", "菜单", "TEST OBJ1014", "TEST OBJ1155",
           "网络错误", "网络故障"}
 
+# Canonical Chinese label -> English label rendered by the English UI test
+# package (com.t4game.en).  The Chinese build stays authoritative; the English
+# build is a separately named test APK, so both spellings map to one semantics.
+LABEL_ALIASES = {
+    "开始游戏": ("Start Game",),
+    "修复游戏": ("Repair Game",),
+    "退出游戏": ("Exit Game",),
+    "登录游戏": ("Log In",),
+    "注册账号": ("Register",),
+    "个人中心": ("Account Center",),
+    "修改密码": ("Change Password",),
+    "账号:": ("Account:",),
+    "密码:": ("Password:",),
+    "角色列表": ("Role List",),
+    "名称": ("Name",),
+    "等级": ("Level",),
+    "国家": ("Country",),
+    "创建新角色": ("New Role",),
+    "创建角色": ("Create Role",),
+    "名字": ("Name",),
+    "性别": ("Gender",),
+    "职业": ("Class",),
+    "创建": ("Create",),
+    "男": ("Male",),
+    "东国": ("East",),
+    "力士": ("Warrior",),
+    "进入游戏": ("Enter Game",),
+    "删除角色": ("Delete Role",),
+    "输入角色的名字:": ("Enter role name:",),
+    "确定": ("OK",),
+    "返回": ("Back",),
+    "选择": ("Select",),
+    "网络错误": ("Network Error",),
+    "网络故障": ("Network Error",),
+    "聊天": ("Chat",),
+}
+LABELS = LABELS | {text for alias in LABEL_ALIASES.values() for text in alias}
+
+
+def label_matches(text, label):
+    """True when an OCR item spells the canonical label in either language."""
+    if text == label:
+        return True
+    compact = text.replace(" ", "")
+    return any(compact == alias.replace(" ", "")
+               for alias in LABEL_ALIASES.get(label, ()))
+
 
 def name_visible(items, name):
     """True when OCR sees exactly the requested role name in the focused field.
@@ -76,17 +123,28 @@ def center(item):
 def classify(items):
     normalize = lambda text: text.strip().replace("\uff1a", ":")
     texts = {i["text"].strip().replace("：", ":") for i in items if i["score"] >= .90}
-    if texts & {"网络错误", "网络故障"}:
+    # Reading-order concatenation without spaces: an English label split by the
+    # detector ("Start" + "Game") must still classify as one screen.
+    joined = "".join(i["text"] for i in items).replace(" ", "")
+    if texts & {"网络错误", "网络故障", "Network Error"} or "NetworkError" in joined:
         return "NETWORK_ERROR"
-    if {"开始游戏", "退出游戏", "修复游戏"} <= texts:
+    if ({"开始游戏", "退出游戏", "修复游戏"} <= texts
+            or ("StartGame" in joined and "ExitGame" in joined
+                and "RepairGame" in joined)):
         return "START_MENU"
-    if {"账号:", "登录游戏"} <= texts:
+    if ({"账号:", "登录游戏"} <= texts
+            or ("LogIn" in joined
+                and any(k in joined for k in ("Account", "Accou", "Passw")))):
         return "ACCOUNT_LOGIN"
-    if "角色列表" in texts:
+    if "角色列表" in texts or "RoleList" in joined:
         return "ROLE_LIST"
-    if {"创建角色", "名字", "创建"} <= texts:
+    if ({"创建角色", "名字", "创建"} <= texts
+            or ("CreateRole" in joined and "Name" in joined and "Create" in joined)):
         return "CREATE_ROLE"
     if any("输入角色的名字" in s for s in texts) and "确定" in texts:
+        return "NAME_INPUT"
+    if any("Enter role name" in normalize(i["text"]) and i["score"] >= .80
+           for i in items) and "OK" in texts:
         return "NAME_INPUT"
     if any("\u8f93\u5165\u89d2\u8272\u7684\u540d\u5b57:" in normalize(i["text"]) and i["score"] >= .80
            for i in items) and "\u786e\u5b9a" in texts:
@@ -94,8 +152,10 @@ def classify(items):
     if "DONE" in texts:
         return "NAME_IME"
     # 画质 and 聊天 are consistently readable on the live HUD; the smaller
-    # 社交/菜单 labels can fall below RapidOCR's confidence threshold.
-    if {"聊天", "画质"} <= texts or {"聊天", "社交", "菜单"} <= texts:
+    # 社交/菜单 labels can fall below RapidOCR's confidence threshold.  The
+    # 画质/菜单 buttons are PNG assets, so they stay Chinese in both builds.
+    if ({"聊天", "画质"} <= texts or {"聊天", "社交", "菜单"} <= texts
+            or {"Chat", "画质"} <= texts):
         return "WORLD_HUD"
     return "UNKNOWN"
 
@@ -329,7 +389,15 @@ class Controller:
             gui.cleanup_transient(raw)
 
     def target(self, obs, label, first=False):
-        matches = [i for i in obs["items"] if i["text"] == label and i["score"] >= .95]
+        items = [i for i in obs["items"] if i["score"] >= .95]
+        matches = [i for i in items if label_matches(i["text"], label)]
+        if not matches:
+            # English labels are sometimes split by the detector
+            # ("Start" + "Game"); the leading token still sits inside the
+            # control, so its box centre remains a valid tap target.
+            matches = [i for i in items if any(
+                i["text"].replace(" ", "") == alias.split(" ", 1)[0].replace(" ", "")
+                for alias in LABEL_ALIASES.get(label, ()) if " " in alias)]
         if not matches or (len(matches) != 1 and not first):
             raise Blocked(f"No unique confident OCR target: {label}")
         return center(min(matches, key=lambda i: center(i)[1]))
@@ -435,8 +503,8 @@ class Controller:
             elif state == "ROLE_LIST":
                 items = obs["items"]
                 choice = role_action(obs["packets"]["role_count"],
-                                     sum(i["text"] == "创建新角色" and i["score"] >= .95 for i in items),
-                                     any(i["text"] == "进入游戏" for i in items), read_json(LEDGER),
+                                     sum(label_matches(i["text"], "创建新角色") and i["score"] >= .95 for i in items),
+                                     any(label_matches(i["text"], "进入游戏") for i in items), read_json(LEDGER),
                                      getattr(self, "session", None))
                 if choice == "enter":
                     save_json(LEDGER, {"existing_role_observed": True})

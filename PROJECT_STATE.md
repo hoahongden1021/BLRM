@@ -244,3 +244,40 @@ Next action: Fix the Python server startup command in `02_test_npc_probe.bat` to
   after that correction. The role_count=0 result belongs to that superseded
   attempt; the current constraint is only "never submit a second creation while
   the existing role is visible".
+
+## 2026-09-26: English UI test build (com.t4game.en)
+
+Record: `docs/research/EN_UI_TEST_BUILD.md`; findings appended to
+`docs/RE_FINDINGS.md`.
+
+- Delivered a separately named English test build (`com.t4game.en`,
+  label `TruThan EN`, `versionCode 215`) installed **alongside**
+  `com.t4game`; nothing uninstalled or cleared. Install needed the duplicate
+  getui `<permission>` declaration removed, first launch needed
+  `pm grant … android.permission.READ_PHONE_STATE`.
+- Map: `build/english_test/build_en_ui.py` — 341 `(zh,en)` pairs over smali
+  `const-string` and `Language*.str`; verification reports
+  `mapping entries still present in Chinese: 0`.
+- Start-menu labels turned out to be baked PNGs (`login/botton*.png`); they are
+  pixel-translated by `build/english_test/translate_menu_labels.py`, which also
+  preserves the original palette-PNG colour type (RGBA output made the client
+  hang at `读取中...100%`).
+- `tools/truthan_ui_control.py` is bilingual: `LABEL_ALIASES`,
+  `label_matches()`, English `classify()` branches and a leading-token fallback
+  for detector-split labels. Focused suite: **50 tests OK**.
+- VERIFIED on the real client with fresh ADB screenshots:
+  `START_MENU` → tap `Start Game` → `ACCOUNT_LOGIN` dialog → tap `Log In` →
+  message `Please enter a username and password`
+  (`run_20260926_en_05/06/07/08/09/10` under `docs/research/ui_control_images/`).
+  All taps used OCR box centres only.
+- **Current blocker:** no saved credentials exist for the new package, and the
+  controller rule is *saved credentials only, never invent or fill fields*
+  (`truthan_ui_control.py:492`), so `ROLE_LIST` / `CREATE_ROLE` / world HUD /
+  inventory / NPC dialog / combat are still untranslated-and-untested territory
+  in the English build.
+- **Next action:** obtain a credential pair for `com.t4game.en` (or an explicit
+  documented saved-credential source), then run
+  `bootstrap --reuse-session --adb-only` and capture the remaining screens.
+- Still deferred: 2879 of 3223 `Language*.str` entries, lore/quests/item
+  descriptions, and the 38-44 px HUD PNGs `菜单` / `画质` / `聊天`
+  (Chinese OCR branch still handles them).
