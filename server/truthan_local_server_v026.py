@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import socket, threading, time, pathlib, struct, traceback, zipfile, os, json, math
 
+import truthan_combat as truthan_combat_lib
+
 PORT_OFFSET = int(os.environ.get("TRUTHAN_PORT_OFFSET", "0"))
 GAME_PORT = 19000 + PORT_OFFSET
 AUTH_PORT = 29000 + PORT_OFFSET
@@ -39,6 +41,20 @@ def _runtime_npc_rows(visible_npcs):
             "can_hit": bool(ent.get("can_hit", 0)),
             "source": "server_probe_cmd132",
         }
+        if ent.get("kind") is not None:
+            row["kind"] = str(ent["kind"])
+        if ent.get("hp") is not None:
+            # Server-tracked combat HP (truthan_combat mutates ent in place).
+            row["hp"] = int(ent["hp"])
+            row["max_hp"] = int(ent.get("max_hp", 0))
+            row["alive"] = int(ent["hp"]) > 0
+        if ent.get("respawn_at") is not None:
+            # truthan_combat stores respawn_at in monotonic MILLISECONDS
+            # (time.monotonic()*1000 + respawn_ms); report whole seconds.
+            row["respawn_in_s"] = round(
+                max(0.0, (ent["respawn_at"] - time.monotonic() * 1000.0) / 1000.0),
+                3,
+            )
         if ent.get("object_data_id") is not None:
             row["object_data_id"] = int(ent["object_data_id"])
         rows.append(row)
@@ -241,6 +257,15 @@ SPRITE_VIEW_MESSAGE = 132
 SPRITE_MOVE_MESSAGE = 133
 NPC_FUNCTION_LIST = 120
 NPC_FUNCTION_TALK = 73
+# Client cmd numbers consumed only while TRUTHAN_COMBAT=1 (MessageCommands.java):
+# 27  ROLE_SKILL_MESSAGE  (server push; heroAttack() NPEs without it)
+# 136 attack request      (GameWorld.sendAttackMessage)
+# 137 skill result        (GameWorld.processSpriteSkillResultMessage)
+# 381 guaji toggle        (logged benignly; no response expected)
+ROLE_SKILL_MESSAGE = 27
+SPRITE_SKILL_MESSAGE = 136
+SPRITE_SKILL_RESULT_MESSAGE = 137
+SET_SPRITE_AUTO_GUAJI = 381
 
 RES_VERSION = "2009-12-18-00"
 
@@ -276,6 +301,12 @@ HUOHUYAO_OBJ_OVERRIDE = os.environ.get("TRUTHAN_HUOHUYAO_OBJ")
 # Explicit data-driven spawn gate. OFF by default so login/map/movement and
 # clean-mode population stay unchanged unless the operator enables it.
 DATA_SPAWN = os.environ.get("TRUTHAN_DATA_SPAWN", "0") == "1"
+# RECONSTRUCTED local combat loop (cmd136 -> cmd137, cmd27 push, cmd132
+# respawn). OFF by default: clean-mode login/map/movement behavior is
+# byte-identical when this switch is off.  Gameplay numbers live in
+# server/truthan_combat.py and are documented as RECONSTRUCTED there.
+COMBAT = os.environ.get("TRUTHAN_COMBAT", "0") == "1"
+COMBAT_CONFIG = truthan_combat_lib.CombatConfig.from_env() if COMBAT else None
 BIND_HOST = os.environ.get("TRUTHAN_BIND", "127.0.0.1")
 SCENE_POPULATION_PATH = pathlib.Path(__file__).with_name("scene_population_9068.json")
 SCENE_WALKABILITY_PATH = pathlib.Path(__file__).with_name("scene_walkability_9068.json")
@@ -356,6 +387,12 @@ ROLE = {
     "x": SPAWN_X,
     "y": SPAWN_Y,
 }
+
+# Player base HP/MP announced by join_game_rsp and reused as the cmd137
+# source HP/MP (processSpriteSkillResultMessage overwrites the local player's
+# values from those fields when flags == 0).
+PLAYER_BASE_HP = 100
+PLAYER_BASE_MP = 100
 
 def pstr(s):
     b = str(s).encode("utf-8")
@@ -602,17 +639,17 @@ def join_game_rsp():
     b += pstr("")                                # gang nickname
 
     # attr_baseHP / attr_baseMP
-    b += struct.pack(">i", 100)
-    b += struct.pack(">i", 100)
+    b += struct.pack(">i", PLAYER_BASE_HP)
+    b += struct.pack(">i", PLAYER_BASE_MP)
 
     # readSpriteUpdateProperty(user, 3)
     # int maxHP, int maxMP, unsigned-byte speed, byte wuxing,
     # byte attackSpeed/flags x3
-    b += struct.pack(">i", 100)                  # maxHP
-    b += struct.pack(">i", 100)                  # maxMP
+    b += struct.pack(">i", PLAYER_BASE_HP)        # maxHP
+    b += struct.pack(">i", PLAYER_BASE_MP)        # maxMP
     b += struct.pack(">B", PLAYER_SPEED)         # movement speed; GSprite default in client is 40
     b += struct.pack(">b", 0)                    # wuxingType
-    b += struct.pack(">b", 10)                   # attack-speed-ish field
+    b += struct.pack(">b", 10)                   # attack-speed-ish field (client CD = value*100 ms)
     b += struct.pack(">b", 0)
     b += struct.pack(">b", 0)
 
@@ -940,6 +977,10 @@ def send_starter_probe_entities(c, f, port, sid, sess):
         wire_ent = {k: v for k, v in ent.items() if k in wire_fields}
         wire_ent["country"] = country
         body = npc_view_body(**wire_ent)
+        # Keep the exact cmd132 add-body for the combat respawn resend
+        # (TRUTHAN_COMBAT=1).  The client either removes the dead sprite or
+        # keeps it until updateDeathTest(); resending this body covers both.
+        ent["_view_body"] = body
         refs = ent.get("_asset_refs", [])
         send(
             c, f, port, SPRITE_VIEW_MESSAGE, body, sid, sess,
@@ -1066,6 +1107,27 @@ def handle(c, addr, port):
         visible_npcs = {}
         last_move = None
         last_npc_request = None
+        combat_session = None
+        frame_sid, frame_sess = 0, 0
+
+        def poll_respawns():
+            """Send due TRUTHAN_COMBAT respawns (cmd132 resend) once per pass."""
+            nonlocal combat_session
+            if combat_session is None:
+                return
+            for sprite_id, rbody, ent in combat_session.due_respawns():
+                send(
+                    c, f, port, SPRITE_VIEW_MESSAGE, rbody, frame_sid, frame_sess,
+                    f"COMBAT respawn cmd132 -> id={sprite_id} "
+                    f"name={ent.get('name')} hp={ent.get('hp')}/{ent.get('max_hp')} "
+                    f"respawns={combat_session.respawn_count}"
+                )
+                write_runtime_state(
+                    visible_npcs,
+                    movement=last_move,
+                    last_npc_request=last_npc_request,
+                    game_connected=True,
+                )
         if port == GAME_PORT:
             write_runtime_state(
                 visible_npcs,
@@ -1075,10 +1137,19 @@ def handle(c, addr, port):
             )
 
         while True:
+            # TRUTHAN_COMBAT: send due respawns before sleeping, then wake up
+            # exactly when the earliest respawn timer expires.  Idle clean-mode
+            # sessions keep the original 60 s keepalive timeout.
+            poll_respawns()
+            if combat_session is not None:
+                wait = combat_session.seconds_to_next_respawn()
+                c.settimeout(max(0.05, min(wait, 60.0)) if wait is not None else 60)
             try:
                 d = c.recv(65535)
             except socket.timeout:
                 # Keep idle map sessions alive and continue checking the peer.
+                # A short combat timeout is a respawn timer: the next pass
+                # through the loop emits the cmd132 resend.
                 continue
             except OSError as e:
                 close_reason = f"socket_error_{type(e).__name__}"
@@ -1094,6 +1165,7 @@ def handle(c, addr, port):
 
             for fr, wire, sid, sess, cmd, body in parse_frames(buf):
                 log_block(f, "RX-FRAME", fr, port, cmd, wire)
+                frame_sid, frame_sess = sid, sess
 
                 try:
                     if port == AUTH_PORT:
@@ -1164,6 +1236,31 @@ def handle(c, addr, port):
                             # to divide by zero every frame.
                             time.sleep(0.15)
                             visible_npcs = send_starter_probe_entities(c, f, port, sid, sess)
+                            if COMBAT:
+                                # heroAttack() NPEs without cmd27: readRoleSkill()
+                                # is the only place that allocates
+                                # normalAttackActionId[].  Body is RECONSTRUCTED
+                                # (empty genius tree, skill -1, action 9 x3,
+                                # hitDistance = TRUTHAN_COMBAT_RANGE).
+                                combat_session = truthan_combat_lib.CombatSession(
+                                    visible_npcs,
+                                    {sid_: e.get("_view_body")
+                                     for sid_, e in visible_npcs.items()},
+                                    COMBAT_CONFIG,
+                                    player_id=ROLE["id"],
+                                    player_hp=PLAYER_BASE_HP,
+                                    player_mp=PLAYER_BASE_MP,
+                                    player_pos=(ROLE["x"], ROLE["y"]),
+                                )
+                                send(
+                                    c, f, port, ROLE_SKILL_MESSAGE,
+                                    truthan_combat_lib.build_role_skill_body(COMBAT_CONFIG),
+                                    sid, sess,
+                                    f"ROLE SKILL cmd27 -> normal attack action="
+                                    f"{COMBAT_CONFIG.attack_action_id} hitDistance="
+                                    f"{COMBAT_CONFIG.attack_range} skillId=-1 "
+                                    f"(RECONSTRUCTED, TRUTHAN_COMBAT=1)"
+                                )
                             write_runtime_state(
                                 visible_npcs,
                                 movement=last_move,
@@ -1273,6 +1370,50 @@ def handle(c, addr, port):
                             # No echo for the local player.  The client updates its own
                             # position before sending this compact movement notification.
 
+                        elif cmd == SPRITE_SKILL_MESSAGE and COMBAT \
+                                and combat_session is not None:
+                            # RECONSTRUCTED combat loop: single normal attack
+                            # (cmd136 from GameWorld.sendAttackMessage()).
+                            # Rejections send no response, mirroring a real
+                            # server-side validation failure.
+                            outcome = combat_session.handle_attack(
+                                body, player_pos=(ROLE["x"], ROLE["y"]))
+                            if outcome.accepted:
+                                target_id = outcome.request["target_id"]
+                                send(
+                                    c, f, port, SPRITE_SKILL_RESULT_MESSAGE,
+                                    outcome.result_body, sid, sess,
+                                    f"COMBAT cmd137 -> target={target_id} "
+                                    f"damage={outcome.damage} hp={outcome.new_hp} "
+                                    f"distance={outcome.distance:.1f} "
+                                    f"died={outcome.died}"
+                                )
+                                if outcome.died:
+                                    print(
+                                        f"COMBAT target {target_id} died; respawn "
+                                        f"after {COMBAT_CONFIG.respawn_ms}ms"
+                                    )
+                                write_runtime_state(
+                                    visible_npcs,
+                                    movement=last_move,
+                                    last_npc_request=last_npc_request,
+                                    game_connected=True,
+                                )
+                            else:
+                                print(
+                                    f"COMBAT cmd136 rejected -> {outcome.reason} "
+                                    f"target={outcome.request.get('target_id') if outcome.request else None}"
+                                )
+
+                        elif cmd == SET_SPRITE_AUTO_GUAJI and COMBAT:
+                            # Client guaji toggle when the player taps a monster;
+                            # no response expected.  Logged benignly so it is
+                            # never mistaken for an unhandled-frame bug.
+                            print(
+                                f"GUANJI cmd381 -> auto-attack toggle "
+                                f"body={body.hex()} (accepted, no response)"
+                            )
+
                         elif cmd == GETUI_CLIENTID_MSG:
                             print(f"GETUI client-id cmd614 captured; ignored for local play.")
 
@@ -1321,6 +1462,14 @@ print(f"  NPC asset probe: {'ON' if (NPC_ASSET_PROBE or CAIYUN_OBJ_OVERRIDE) els
 print(f"  single diagnostic NPC: {'TEST OBJ1014' if SINGLE_NPC_PROBE else 'OFF'}")
 print(f"  mob asset probe: {'ON' if (MOB_ASSET_PROBE or HUOHUYAO_OBJ_OVERRIDE) else 'OFF'}")
 print(f"  data-driven spawn fixtures: {'ON (TEST OBJ1014 first)' if DATA_SPAWN else 'OFF'}")
+if COMBAT:
+    cfg_ = COMBAT_CONFIG
+    print(f"  RECONSTRUCTED combat loop: ON (cmd136 -> cmd137, cmd27 push, "
+          f"cmd132 respawn) range={cfg_.attack_range}px "
+          f"cooldown={cfg_.cooldown_ms}ms damage={cfg_.damage} "
+          f"respawn={cfg_.respawn_ms}ms actionId={cfg_.attack_action_id}")
+else:
+    print("  RECONSTRUCTED combat loop: OFF (TRUTHAN_COMBAT unset; cmd136/381 unhandled)")
 print("Ctrl+C to stop")
 
 try:

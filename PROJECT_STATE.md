@@ -1,28 +1,47 @@
 # Tru Than / 诛神OL Android 1.17 — Project State
 
-Latest milestone (2026-09-26, real client): **scene 9068 NPC interaction is
-now VERIFIED end to end.** One LocalServer v0.26 process (PID 12280, ports
-19000/29000) stayed alive across spawn, movement, selection and dialogue. The
-client was restarted only (`bootstrap --reuse-session --adb-only
---restart-client`, `role_count=1`, `create_sent=false`) so the single existing
-role was reused. After `cmd10` the server sent five `cmd132` records
-(230010 Beginner Guide @170,232 obj1014; 230011 Guide Fairy @190,216 obj1015;
-230012 Village Head @190,248 obj1016; 230110 Fire Fox @210,232 obj1155;
-230111 Reconstructed Creature 2077 @210,248 obj2077), rendered as a sprite
-cluster. A double tap at device `(990,630)` produced RX `cmd=120` with body
-`0003827b` = 230011, the client rendered the function list, tapping `1.Talk`
-produced RX `cmd=73` with the same body, and the rendered title/text matched
-`interaction.title`/`interaction.text` byte for byte. The `flags: []` blocker
-(`ReadNpcFlagFuction` returning null, so `onPointerCheckNPC` never sent cmd120)
-was fixed to `"flags": [5]` for the three NPCs only; the two monsters keep `[]`
-and use the `canHit == 1` branch. Screen geometry is now measured:
-`CANVAS_W = 789`, `CANVAS_H = 424`, scale 3.0, app content box device
-x `393..2758` / y `0..1271`, `win_x = 0`, `win_y = mapY - 212`, so
-`device_x = 393 + 3*(mapX - win_x)` and `device_y = 3*(mapY - win_y)`; the
-tap-to-walk transform `(tile*16, tile*16 + win_y)` was confirmed twice.
-cmd136 request layout corrected to **19 bytes** (docs said 18) and the full
-cmd137 reader is now documented; no cmd136/cmd137 frame exists in any capture,
-so combat response stays UNKNOWN. Evidence:
+Latest milestone (2026-09-26, real client): **scene 9068 monster combat is
+now VERIFIED end to end — select -> attack -> visible HP drain -> death ->
+respawn.** Fresh runtime via `py tools\truthan_gui.py launch` + `bootstrap
+--adb-only` reached `BOOTSTRAP_PASS`/`WORLD_HUD` (trace
+`runtime\agent\ui_control\20260926T111205_768152Z\trace.jsonl`). A fast
+double tap at device `(860,564)` selected and confirmed monster 230110 Fire
+Fox (pick box 48x52 canvas units evaluated on pointer release; nearby boxes
+overlap, so the point was derived relative to the live nameplate); the
+client's auto-attack chain then sent RX `cmd=136` (19B) at ~1 s cadence and
+every frame was answered with TX `cmd=137` (66B, `hit_result=5`,
+`damage=15`), draining hp `60->45->30->15->0`, with respawn TX `cmd=132`
+at exactly **+5 s** and full HP restore; two full kill/respawn cycles were
+observed, monster-only protection held (230010-230012 never targeted,
+cmd136 against them rejected `npc_protected`), and `-15` damage numbers plus
+the target-frame HP bar were captured on screen. Implementation:
+`server/truthan_combat.py` + integration in
+`server/truthan_local_server_v026.py`, off by default (`TRUTHAN_COMBAT=0`),
+all tunables env-configured RECONSTRUCTED values (`RANGE=64`,
+`COOLDOWN_MS=500`, `DAMAGE=15`, `RESPAWN_MS=5000`). Fixes landed with it:
+`respawn_in_s` ms/s clock mix-up in runtime telemetry (now counts 5.0->0,
+regression-tested), `--no-create` precedence over a stale creation ledger,
+and CREATE_ROLE OCR tolerance for the `lame`/`Name` misread. cmd136/cmd137
+are now LIVE-VERIFIED (both docs updated from PARTIAL/UNKNOWN). Evidence:
+`server/truthan_packet_logs/20260926_191043_*.log`,
+`server/truthan_packet_logs/20260926_201236_*.log`,
+`docs/research/ui_control_images/run_20260926_en_combat*/`,
+`docs/RE_FINDINGS.md` (combat section). Focused suite: **81 tests OK**.
+
+Prior milestone (2026-09-26, real client): **scene 9068 NPC interaction is
+VERIFIED end to end.** One LocalServer v0.26 process stayed alive across
+spawn, movement, selection and dialogue. After `cmd10` the server sent five
+`cmd132` records (230010 Beginner Guide @170,232 obj1014; 230011 Guide
+Fairy @190,216 obj1015; 230012 Village Head @190,248 obj1016; 230110 Fire
+Fox @210,232 obj1155; 230111 Reconstructed Creature 2077 @210,248 obj2077),
+rendered as a sprite cluster. A double tap at device `(990,630)` produced RX
+`cmd=120` with body `0003827b` = 230011, the client rendered the function
+list, tapping `1.Talk` produced RX `cmd=73` with the same body, and the
+rendered title/text matched `interaction.title`/`interaction.text` byte for
+byte. The `flags: []` blocker (`ReadNpcFlagFuction` returning null, so
+`onPointerCheckNPC` never sent cmd120) was fixed to `"flags": [5]` for the
+three NPCs only; the two monsters keep `[]` and use the `canHit == 1`
+branch. Evidence:
 `server/truthan_packet_logs/20260926_011006_p19000_127.0.0.1_52422.log`,
 `docs/research/NPC_INTERACTION_HANDOFF.md`, `docs/research/ui_control_images/run_20260926_*.png`.
 

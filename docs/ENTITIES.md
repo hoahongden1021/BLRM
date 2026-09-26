@@ -14,11 +14,19 @@ rows and dialogue text, is in
 
 With `TRUTHAN_DATA_SPAWN=1`, configured cmd132 records are sent after the
 cmd10 scene-ready response. NPCs have local cmd120 function 7 / cmd73 dialogue
-responses; no recovered quest IDs or quest records are included. The cmd136
-monster request is statically understood, but the cmd137 response needs nested
-skill-effect/property data whose layout is unresolved, so combat is not
-implemented. Population is off by default. No real-client visual check of
-this populated data has passed yet.
+responses; no recovered quest IDs or quest records are included. **Combat is
+implemented and VERIFIED live (2026-09-26, `TRUTHAN_COMBAT=1`):** the real
+client double-tapped monster 230110 Fire Fox at device `(860,564)`, its
+auto-attack chain sent cmd136 (19B) at ~1 s cadence, the server answered
+cmd137 (66B) draining hp `60->45->30->15->0`, and the monster respawned via
+cmd132 at exactly +5 s with full HP; monsters 230110/230111 were killed and
+respawned repeatedly while the three talk NPCs were never targeted (cmd136
+against them is rejected `npc_protected`). All combat values are explicit
+RECONSTRUCTED tunables, off by default (`TRUTHAN_COMBAT=0`). Damage numbers
+`-15` and the target-frame HP bar were captured on screen in
+`docs/research/ui_control_images/run_20260926_en_combat*/`. Population
+remains off by default. The populated data has passed real-client visual
+checks (dialogue + combat rendering).
 
 ## 2026-09-22 runtime result: one diagnostic GNPC
 

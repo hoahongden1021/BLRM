@@ -144,7 +144,9 @@ class ControllerTests(unittest.TestCase):
 
     def test_observation_expiring_during_action_checks_never_taps(self):
         controller=ui.Controller.__new__(ui.Controller)
-        clock=iter((100.0,103.1))
+        # Second check happens after the ADB image-to-OCR processing window
+        # (6.0s budget for source=adb); 106.1-99.9=6.2s must expire.
+        clock=iter((100.0,106.1))
         with patch("truthan_screen_watch._device_screen_size",return_value=(200,200)), \
              patch.object(ui.gui,"current_focus",return_value={"truthan_foreground":True}), \
              patch.object(ui,"time") as mocked_time, \
@@ -281,6 +283,193 @@ class ControllerTests(unittest.TestCase):
         controller=ui.Controller.__new__(ui.Controller)
         with self.assertRaises(ui.Blocked):
             controller.target({"items":[item,item]},"确定")
+
+
+class CredentialFillTests(unittest.TestCase):
+    """Env-gated local-test credential fill (TRUTHAN_LOCAL_TEST_CREDENTIALS)."""
+
+    def test_credentials_off_by_default(self):
+        self.assertIsNone(ui.credentials({}))
+        self.assertIsNone(ui.credentials({"TRUTHAN_LOCAL_TEST_CREDENTIALS": ""}))
+        self.assertIsNone(ui.credentials({"TRUTHAN_LOCAL_TEST_CREDENTIALS": "  "}))
+
+    def test_credentials_parses_user_pass_once(self):
+        pair = ui.credentials({"TRUTHAN_LOCAL_TEST_CREDENTIALS": "blrmtest:blrmtest"})
+        self.assertEqual(pair, ("blrmtest", "blrmtest"))
+        pair = ui.credentials({"TRUTHAN_LOCAL_TEST_CREDENTIALS": "user:pa:ss"})
+        self.assertEqual(pair, ("user", "pa:ss"))
+
+    def test_credentials_rejects_malformed_values(self):
+        for raw in ("nocolon", ":x", "x:", "blrmtest:blrm test", "a\tb:c"):
+            with self.assertRaises(ui.Blocked):
+                ui.credentials({"TRUTHAN_LOCAL_TEST_CREDENTIALS": raw})
+
+    def test_field_hint_matches_is_scoped_to_login_fields(self):
+        self.assertTrue(ui.field_hint_matches("Accou", "账号:"))
+        self.assertTrue(ui.field_hint_matches("Passw", "密码:"))
+        self.assertTrue(ui.field_hint_matches("Account", "账号:"))
+        self.assertTrue(ui.field_hint_matches("Password", "密码:"))
+        self.assertFalse(ui.field_hint_matches("Acc", "账号:"), "too short to trust")
+        self.assertFalse(ui.field_hint_matches("Accou", "密码:"))
+        self.assertFalse(ui.field_hint_matches("Accou", "登录游戏"))
+
+    def test_field_content_visible_uses_input_bands_only(self):
+        def item(x, y):
+            return {"text": "x", "score": .99,
+                    "box": [[x - 5, y - 5], [x + 5, y - 5],
+                            [x + 5, y + 5], [x - 5, y + 5]]}
+        items = [item(1247, 254), item(1564, 441)]  # hint + Save password
+        self.assertFalse(ui.field_content_visible(items, "账号:"))
+        self.assertFalse(ui.field_content_visible(items, "密码:"))
+        items.append(item(1488, 243))               # account content
+        self.assertTrue(ui.field_content_visible(items, "账号:"))
+        self.assertFalse(ui.field_content_visible(items, "密码:"))
+        items.append(item(1488, 333))               # password content/asterisks
+        self.assertTrue(ui.field_content_visible(items, "密码:"))
+        malformed = [{"text": "x", "score": .99, "box": [[0, 0]]}]
+        self.assertFalse(ui.field_content_visible(malformed, "账号:"),
+                         "malformed boxes are skipped, not fatal")
+
+    def test_classify_register_form(self):
+        def item(text):
+            return {"text": text, "score": .99,
+                    "box": [[0, 0], [1, 0], [1, 1], [0, 1]]}
+        items = [item("Enter account:"), item("Enter password:"),
+                 item("Note:"), item("OK"), item("Back")]
+        self.assertEqual(ui.classify(items), "REGISTER")
+
+    def test_classify_create_role_en_tolerates_lame_ocr(self):
+        def item(text):
+            return {"text": text, "score": .99,
+                    "box": [[0, 0], [1, 0], [1, 1], [0, 1]]}
+        # Live EN screen: 'Name' misread as 'lame', no whole 'Name' token.
+        items = [item("Create Role"), item("lame"), item("Class"),
+                 item("Warrior"), item("Create"), item("Back")]
+        self.assertEqual(ui.classify(items), "CREATE_ROLE")
+        # Role List wins earlier when its title is present.
+        items.insert(0, item("Role List"))
+        self.assertEqual(ui.classify(items), "ROLE_LIST")
+
+    def test_target_uses_clipped_field_hint_and_topmost_match(self):
+        def box(x, y):
+            return [[x, y], [x + 80, y], [x + 80, y + 40], [x, y + 40]]
+        hint = {"text": "Accou", "score": 1.0, "box": box(1200, 230)}
+        button = {"text": "Account", "score": 1.0, "box": box(1350, 630)}
+        controller = ui.Controller.__new__(ui.Controller)
+        with self.assertRaises(ui.Blocked):
+            controller.target({"items": [hint, button]}, "账号:")
+        self.assertEqual(controller.target({"items": [hint, button]}, "账号:", first=True),
+                         ui.center(hint))
+        self.assertEqual(controller.target({"items": [hint]}, "账号:"), ui.center(hint))
+
+    def _login_obs(self, items):
+        return {"in_game": False, "screen": "ACCOUNT_LOGIN",
+                "dimensions": [2992, 1344], "items": items,
+                "packets": {"headers": [], "ready": False, "role_count": None}}
+
+    def _field_item(self, x, y):
+        return {"text": "content", "score": 1.0,
+                "box": [[x - 20, y - 10], [x + 20, y - 10],
+                        [x + 20, y + 10], [x - 20, y + 10]]}
+
+    def test_bootstrap_fills_only_when_env_set(self):
+        hint_items = [{"text": "Accou", "score": 1.0,
+                       "box": [[1160, 219], [1335, 219], [1335, 288], [1160, 288]]},
+                      {"text": "登录游戏", "score": .99,
+                       "box": [[1291, 513], [1467, 513], [1467, 594], [1291, 594]]}]
+        empty_obs = self._login_obs(hint_items)
+        account_typed = self._login_obs(hint_items + [self._field_item(1488, 243)])
+        filled_obs = self._login_obs(hint_items
+                                     + [self._field_item(1488, 243),
+                                        self._field_item(1488, 333)])
+        role_obs = {"in_game": False, "screen": "ROLE_LIST",
+                    "dimensions": [2992, 1344],
+                    "items": [{"text": "创建新角色", "score": .99,
+                               "box": [[0, 0], [1, 0], [1, 1], [0, 1]]}
+                              for _ in range(4)],
+                    "packets": {"headers": [], "ready": False, "role_count": 0}}
+        taps, actions = [], []
+
+        def fake_calibrated(_obs, xy):
+            taps.append(list(xy))
+            return _obs
+
+        def fake_action(_obs, args, _basis):
+            actions.append(list(args))
+            return account_typed if len(actions) == 1 else filled_obs
+
+        def fake_tap(_obs, label, first=False):
+            return role_obs if label == "登录游戏" else _obs
+
+        controller = ui.Controller.__new__(ui.Controller)
+        controller.started = time.time()
+        with patch.dict(ui.os.environ, {"TRUTHAN_LOCAL_TEST_CREDENTIALS":
+                                        "blrmtest:blrmtest"}), \
+             patch.object(controller, "observe", side_effect=[empty_obs, role_obs]), \
+             patch.object(controller, "record"), \
+             patch.object(controller, "calibrated", side_effect=fake_calibrated), \
+             patch.object(controller, "action", side_effect=fake_action), \
+             patch.object(controller, "tap_label", side_effect=fake_tap):
+            with self.assertRaisesRegex(ui.Blocked, "--no-create"):
+                controller.bootstrap(allow_create=False)
+        self.assertEqual(taps, [[1488, 243], [1488, 333]],
+                         "empty fields are focused at calibrated input centres")
+        self.assertEqual(len(actions), 2)
+        self.assertEqual(actions[0][:3], ["shell", "input", "text"])
+        self.assertEqual(actions[0][3], "blrmtest")
+        self.assertEqual(actions[1][3], "blrmtest")
+        self.assertNotIn("blrmtest", " ".join(ui.safe_command(actions[0])))
+
+    def test_fill_keeps_prefilled_account_and_password(self):
+        hint_items = [{"text": "Accou", "score": 1.0,
+                       "box": [[1160, 219], [1335, 219], [1335, 288], [1160, 288]]},
+                      {"text": "登录游戏", "score": .99,
+                       "box": [[1291, 513], [1467, 513], [1467, 594], [1291, 594]]}]
+        prefilled = self._login_obs(hint_items
+                                    + [self._field_item(1488, 243),
+                                       self._field_item(1488, 333)])
+        role_obs = {"in_game": False, "screen": "ROLE_LIST",
+                    "dimensions": [2992, 1344],
+                    "items": [{"text": "创建新角色", "score": .99,
+                               "box": [[0, 0], [1, 0], [1, 1], [0, 1]]}
+                              for _ in range(4)],
+                    "packets": {"headers": [], "ready": False, "role_count": 0}}
+        controller = ui.Controller.__new__(ui.Controller)
+        controller.started = time.time()
+        with patch.dict(ui.os.environ, {"TRUTHAN_LOCAL_TEST_CREDENTIALS":
+                                        "blrmtest:blrmtest"}), \
+             patch.object(controller, "observe", side_effect=[prefilled, role_obs]), \
+             patch.object(controller, "record"), \
+             patch.object(controller, "calibrated") as calibrated, \
+             patch.object(controller, "action") as action, \
+             patch.object(controller, "tap_label",
+                          side_effect=lambda o, l, first=False:
+                          role_obs if l == "登录游戏" else o):
+            with self.assertRaisesRegex(ui.Blocked, "--no-create"):
+                controller.bootstrap(allow_create=False)
+        calibrated.assert_not_called()
+        action.assert_not_called()
+
+    def test_bootstrap_without_env_never_taps_field_labels(self):
+        login_obs = {"in_game": False, "screen": "ACCOUNT_LOGIN",
+                     "dimensions": [2992, 1344],
+                     "items": [{"text": "登录游戏", "score": .99,
+                                "box": [[0, 0], [1, 0], [1, 1], [0, 1]]}],
+                     "packets": {"headers": [], "ready": False, "role_count": None}}
+        controller = ui.Controller.__new__(ui.Controller)
+        controller.started = time.time()
+        labels = []
+        with patch.dict(ui.os.environ, {}, clear=True), \
+             patch.object(controller, "observe", return_value=login_obs), \
+             patch.object(controller, "record"), \
+             patch.object(controller, "tap_label",
+                          side_effect=lambda o, l, first=False: labels.append(l) or o):
+            with self.assertRaises(ui.Blocked):
+                controller.bootstrap()
+        self.assertTrue(labels)
+        self.assertNotIn("账号:", labels)
+        self.assertNotIn("密码:", labels)
+        self.assertEqual(set(labels), {"登录游戏"})
 
 
 if __name__ == "__main__":

@@ -86,6 +86,83 @@ def name_visible(items, name):
     return any(i["text"].replace("|", "") == name for i in items)
 
 
+def credentials(env=None):
+    """Explicit local-test credential pair; off unless the variable is set.
+
+    TRUTHAN_LOCAL_TEST_CREDENTIALS='user:pass' gates every field fill
+    (authorized local-test value for the local server only, which accepts any
+    account).  Without the variable the controller keeps the original rule:
+    saved credentials only, never fill.  The value itself is never printed;
+    adb input text is redacted in the trace by safe_command().
+    """
+    env = os.environ if env is None else env
+    raw = str(env.get("TRUTHAN_LOCAL_TEST_CREDENTIALS", "")).strip()
+    if not raw:
+        return None
+    if ":" not in raw:
+        raise Blocked("TRUTHAN_LOCAL_TEST_CREDENTIALS must be user:pass")
+    account, secret = raw.split(":", 1)
+    if not account or not secret:
+        raise Blocked("TRUTHAN_LOCAL_TEST_CREDENTIALS must be user:pass")
+    if any(ch.isspace() for ch in account + secret):
+        raise Blocked("TRUTHAN_LOCAL_TEST_CREDENTIALS cannot contain whitespace")
+    return account, secret
+
+
+def field_hint_matches(text, label):
+    """Detector-clipped login field hint (only for 账号:/密码:).
+
+    Real EN evidence (run_20260926_en_09/10_login_dialog): RapidOCR scores the
+    account/password field hints as 'Accou' and 'Passw' at 1.000 because the
+    detector clips them.  A high-confidence strict prefix of the full field
+    label (canonical or English alias) still lies inside that field's box, so
+    its centre remains a valid focus tap.  Scoped to the two field labels so
+    no other tap can be hijacked by prefix matching.
+    """
+    if label not in ("账号:", "密码:"):
+        return False
+    compact = text.strip().replace(" ", "")
+    if len(compact) < 4:
+        return False
+    full = (label,) + LABEL_ALIASES.get(label, ())
+    return any(f.replace(" ", "").startswith(compact) for f in full)
+
+
+# Login-dialog input geometry on the real 2992x1344 client, verified from live
+# OCR 2026-09-26: the field hints 'Accou'/'Passw' sit LEFT of the inputs
+# (x<=1335) and tapping them does NOT focus the field; real content lands in
+# the band right of x=1376 (the same band as the ACCOUNT_LOGIN privacy mask,
+# width*.46..67) - account content center (1488,243), password asterisks
+# center (1488,333).  An EMPTY field has no OCR item, so focus taps use these
+# calibrated centers, matching the existing CREATE_ROLE/NAME_INPUT pattern.
+LOGIN_INPUT_BANDS = {
+    "账号:": (1376, 201, 2005, 300),
+    "密码:": (1376, 305, 2005, 403),
+}
+LOGIN_INPUT_TAPS = {
+    "账号:": (1488, 243),
+    "密码:": (1488, 333),
+}
+
+
+def field_content_visible(items, label):
+    """True when an OCR item's centre falls inside the field's input band.
+
+    Field hints, the Save-password checkbox and all buttons render outside
+    the band, so only actual field content matches.  Malformed boxes are
+    skipped rather than blocking the observation.
+    """
+    x0, y0, x1, y1 = LOGIN_INPUT_BANDS[label]
+    for item in items:
+        try:
+            cx, cy = center(item)
+        except Blocked:
+            continue
+        if x0 <= cx <= x1 and y0 <= cy <= y1:
+            return True
+    return False
+
+
 class Blocked(RuntimeError):
     pass
 
@@ -136,10 +213,19 @@ def classify(items):
             or ("LogIn" in joined
                 and any(k in joined for k in ("Account", "Accou", "Passw")))):
         return "ACCOUNT_LOGIN"
+    # Register form (live EN evidence 2026-09-26): 'Enter account:' /
+    # 'Enter password:' / 'Note:' with OK/Back; it is not a role-name screen.
+    if "Enteraccount:" in joined or "Enteraccount" in joined:
+        return "REGISTER"
     if "角色列表" in texts or "RoleList" in joined:
         return "ROLE_LIST"
     if ({"创建角色", "名字", "创建"} <= texts
-            or ("CreateRole" in joined and "Name" in joined and "Create" in joined)):
+            or ("CreateRole" in joined and "Create" in joined
+                # Live EN evidence 2026-09-26: the name label OCRs as 'lame'
+                # (0.963) and gender/class stay partly Chinese, but the title
+                # 'Create Role' + button 'Create' + the stable 'Class' label
+                # uniquely identify this form.
+                and any(k in joined for k in ("Name", "lame", "Class")))):
         return "CREATE_ROLE"
     if any("输入角色的名字" in s for s in texts) and "确定" in texts:
         return "NAME_INPUT"
@@ -398,12 +484,23 @@ class Controller:
             matches = [i for i in items if any(
                 i["text"].replace(" ", "") == alias.split(" ", 1)[0].replace(" ", "")
                 for alias in LABEL_ALIASES.get(label, ()) if " " in alias)]
+        if not matches:
+            # Detector-clipped login field hints: 'Accou'/'Passw' (score 1.0)
+            # on the real EN build; a prefix of the field label sits inside it.
+            matches = [i for i in items if field_hint_matches(i["text"], label)]
         if not matches or (len(matches) != 1 and not first):
             raise Blocked(f"No unique confident OCR target: {label}")
         return center(min(matches, key=lambda i: center(i)[1]))
 
     def action(self, obs, args, basis):
-        max_age = 1.5 if obs.get("source") == "watcher" else 3.0
+        # ADB observations are only usable after in-observe processing that runs
+        # AFTER the captured timestamp: screencap ~2.1s, warm RapidOCR ~1.2-2.7s
+        # (first call loads models), masked PNG save ~0.3s (measured 2026-09-26:
+        # capture-to-return 2.9-3.4s).  A 3.0s budget therefore failed on the
+        # boundary and blocked every tap; 6.0s covers the measured processing
+        # while still rejecting genuinely stale UI.  Watcher frames carry their
+        # own frame/OCR timestamps and keep the tight 1.5s budget.
+        max_age = 1.5 if obs.get("source") == "watcher" else 6.0
         def require_fresh():
             now = time.time()
             if now - obs["captured"] > max_age:
@@ -451,7 +548,7 @@ class Controller:
                     self.record(event="watcher_action_fallback", reason="observation expired before label tap",
                                 frame_id=obs.get("frame_id"), frame_timestamp_epoch=frame_ts,
                                 ocr_timestamp_epoch=ocr_ts)
-            elif now-obs["captured"] > 2.0:
+            elif now - obs["captured"] > 5.0:
                 refresh = True
                 self.record(event="adb_action_refresh", reason="screenshot/OCR aged before label tap")
             if refresh:
@@ -472,6 +569,46 @@ class Controller:
             raise Blocked("Uncalibrated dimensions; need a new real-client calibration")
         return self.tap(obs, xy, "Native 2992x1344 field geometry verified in UI_CONTROL_TRACE.json")
 
+    def fill_credentials(self, obs, account, secret):
+        """Env-gated local-test credential fill at ACCOUNT_LOGIN.
+
+        Runs only when TRUTHAN_LOCAL_TEST_CREDENTIALS is set (local server
+        accepts any pair; a prefilled different account is fine to keep).
+        A field that already has visible content is left untouched; an empty
+        field is focused at its calibrated input centre (verified live
+        2026-09-26; the hint labels left of the fields do NOT focus) and then
+        verified by content appearing in the field's input band.  A failed
+        verification stops with a screenshot-able Blocked error instead of
+        guessing (repeat input text would append to the field).
+        """
+        if list(obs.get("dimensions") or []) != [2992, 1344]:
+            raise Blocked("Credential fill requires calibrated 2992x1344 login dialog")
+        if getattr(self, "fill_step", 0) == 0:
+            if field_content_visible(obs["items"], "账号:"):
+                self.record(event="credential_fill_account_preloaded")
+            else:
+                obs = self.calibrated(obs, list(LOGIN_INPUT_TAPS["账号:"]))
+                obs = self.action(obs, ["shell", "input", "text", account],
+                                  "calibrated account input centre (live OCR 2026-09-26)")
+                if not field_content_visible(obs["items"], "账号:"):
+                    raise Blocked("Account input did not accept text; "
+                                  "inspect the fresh screenshot before retrying")
+                self.record(event="credential_fill_account_typed")
+            self.fill_step = 1
+        if getattr(self, "fill_step", 0) == 1:
+            if field_content_visible(obs["items"], "密码:"):
+                self.record(event="credential_fill_password_preloaded")
+            else:
+                obs = self.calibrated(obs, list(LOGIN_INPUT_TAPS["密码:"]))
+                obs = self.action(obs, ["shell", "input", "text", secret],
+                                  "calibrated password input centre (live OCR 2026-09-26)")
+                if not field_content_visible(obs["items"], "密码:"):
+                    raise Blocked("Password input did not accept text; "
+                                  "inspect the fresh screenshot before retrying")
+                self.record(event="credential_fill_password_typed")
+            self.fill_step = 2
+        return obs
+
     def bootstrap(self, name="CodexU", allow_create=True):
         attempts = {}
         obs = self.observe()
@@ -490,6 +627,10 @@ class Controller:
             if state == "START_MENU":
                 obs = self.tap_label(obs, "开始游戏")
             elif state == "ACCOUNT_LOGIN":
+                local_credentials = credentials()
+                if local_credentials is not None and getattr(self, "fill_step", 0) < 2:
+                    # Explicit env-gated local-test fill; never runs without it.
+                    obs = self.fill_credentials(obs, *local_credentials)
                 # Saved credentials only. Never invent credentials or fill fields.
                 if obs["packets"]["headers"] and not obs["packets"].get("ready"):
                     # A response may be in flight; observe before another submission.
@@ -502,9 +643,13 @@ class Controller:
                 obs = self.tap_label(obs, "登录游戏")
             elif state == "ROLE_LIST":
                 items = obs["items"]
+                # When --no-create forbids creation the ledger guard is
+                # irrelevant: the caller must get the --no-create refusal, not
+                # a stale-ledger message from a previous live run.
                 choice = role_action(obs["packets"]["role_count"],
                                      sum(label_matches(i["text"], "创建新角色") and i["score"] >= .95 for i in items),
-                                     any(label_matches(i["text"], "进入游戏") for i in items), read_json(LEDGER),
+                                     any(label_matches(i["text"], "进入游戏") for i in items),
+                                     read_json(LEDGER) if allow_create else None,
                                      getattr(self, "session", None))
                 if choice == "enter":
                     save_json(LEDGER, {"existing_role_observed": True})
@@ -541,6 +686,10 @@ class Controller:
                     if attempts[step] > 1:
                         raise Blocked("Typed name not visible; refusing to append text")
                     obs = self.action(obs, ["shell", "input", "text", name], "focused name IME; ASCII name max six characters")
+            elif state == "REGISTER":
+                # Detour screen (live evidence 2026-09-26): leave it with the
+                # OCR 'Back' box and continue the login flow on ACCOUNT_LOGIN.
+                obs = self.tap_label(obs, "返回", first=True)
             elif state == "UNKNOWN" or state == "WORLD_HUD":
                 time.sleep(5)
                 obs = self.observe()

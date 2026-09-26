@@ -369,8 +369,8 @@ cmd136/cmd137: `sendAttackMessage` (`GameWorld:13429`) writes a **19-byte**
 body (the earlier note in `docs/PROTOCOL.md` said 18 and was corrected).
 `processSpriteSkillResultMessage` (`:11411`, `case 137` at `:7311`) with
 `readSkillActionSEData` (`:13177`) and `readSpriteUpdateProperty` (`:13187`)
-give a complete static cmd137 reader. No cmd136 or cmd137 frame exists in any
-capture, so combat response stays `UNKNOWN`; nothing was fabricated.
+give a complete static cmd137 reader. Both were **validated against live
+frames on 2026-09-26** — see the combat section at the end of this file.
 
 ---
 
@@ -401,3 +401,72 @@ Full record: `docs/research/EN_UI_TEST_BUILD.md`.
 - Bilingual UI classification in `tools/truthan_ui_control.py` now matches
   English screen states (start menu, login dialog, role list, role create) and
   tolerates labels split by the detector; focused suite: 50 tests OK.
+
+---
+
+## 2026-09-26: live combat verification (Fire Fox, scene 9068) + controller fixes
+
+Primary milestone of this session. Full sequence, all with `TRUTHAN_COMBAT=1`,
+`TRUTHAN_DATA_SPAWN=1`, `TRUTHAN_SCENE=9068`, package `com.t4game.en`:
+
+- **BOOTSTRAP_PASS** on a fresh runtime (`py tools\truthan_gui.py launch`,
+  then `bootstrap --adb-only`): CREATE_ROLE classified, role created, entered
+  scene 9068, `WORLD_HUD`; trace
+  `runtime\agent\ui_control\20260926T111205_768152Z\trace.jsonl` (earlier
+  pass: `20260926T101534_864458Z`).
+- **Selection + confirm**: `onPointerSelectNPC` (`GameWorld:15412`) pick box
+  is 48x52 canvas units at `(mapX-screen_mapx)-21..+27`,
+  `(mapY-screen_mapy)-42..+10`, evaluated on pointer RELEASE. Nearby entity
+  boxes overlap heavily, so absolute map-to-screen constants were never fully
+  trusted; instead the box was derived relative to the live Fire Fox
+  nameplate. Working point (device px, 2992x1344 display): **(860,564)**,
+  fast double-tap (~0.6 s apart). First tap selects, second tap on the same
+  sprite sets `isChoicingPointerConfirm` -> `onPointerCheckNPC` (`:2627`)
+  -> `canHit=1` + in range -> `autoAttack=true` (+`autoGuaJi`, cmd381).
+  Tapping a talk-eligible NPC instead sends cmd120 (dialog observed live:
+  Guide Fairy title via `2.Back` double-tap to exit).
+- **Attack chain**: `useQuickNomarlAttack` (`:21133`) -> `heroAttack` +
+  `sendAttackMessage` (`:13429`, opcode 136, 19B body `>ibhhbbbhhhb`);
+  `testAutoAttack` (`:13840`) repeats ~1 s. Server answered every RX cmd136
+  with TX cmd137 (66B), `hit_result=5`, `damage=15`, `src_hp=100`.
+- **Full life cycle**: hp `60->45->30->15->0`, death, respawn TX cmd132 at
+  exactly **+5 s** (`TRUTHAN_COMBAT_RESPAWN_MS`), hp reset to 60, auto-hunt
+  re-targeted and killed again — two complete cycles observed.
+  Monster-only protection held: cmd136 against 230010-230012 is rejected
+  (`npc_protected`) and the client never targeted them.
+- **Visual evidence**: floating `-15` damage numbers on the target and the
+  target-frame HP bar draining, screens in
+  `docs/research/ui_control_images/run_20260926_en_combat{,_final}/`.
+- **Packet evidence**:
+  `server/truthan_packet_logs/20260926_191043_p19000_*.log` and
+  `20260926_201236_p19000_*.log` (184 cmd136/184 cmd137 pairs in the latter).
+
+Server implementation (off by default, `TRUTHAN_COMBAT=0`): env-configured
+RECONSTRUCTED tunables `TRUTHAN_COMBAT_RANGE=64`,
+`TRUTHAN_COMBAT_COOLDOWN_MS=500`, `TRUTHAN_COMBAT_DAMAGE=15`,
+`TRUTHAN_COMBAT_RESPAWN_MS=5000`; `server/truthan_combat.py` +
+integration in `server/truthan_local_server_v026.py`. Tests:
+`tests/test_truthan_combat.py` + `tests/test_combat_integration.py`
+(hp-trace 45/30/15/0, respawn, second life, clean-mode ignore).
+
+Fixes found while verifying:
+
+- `respawn_in_s` telemetry mixed clocks: `truthan_combat` stores `respawn_at`
+  in monotonic **milliseconds** but the state writer subtracted
+  `time.monotonic()` **seconds**, printing ~2.7e8. Fixed to
+  `(respawn_at - monotonic*1000)/1000`; live countdown now reads
+  `5.0 -> 3.99 -> 2.97 -> 1.96 -> 0.94 -> respawn`. Regression-guarded in
+  `tests/test_combat_integration.py` (must be within 0..1.5 s window).
+- `--no-create` precedence: a stale live-run creation ledger
+  (`runtime/agent/ui_control/creation.json`) made `bootstrap --no-create`
+  fail with "Creation already attempted" instead of the promised refusal.
+  The ledger guard is now skipped entirely when `allow_create` is false
+  (guard only matters when creating).
+- CREATE_ROLE OCR: the name label misreads as `lame` (0.963) instead of
+  `Name`; classification accepts `Name|lame|Class`, test
+  `test_classify_create_role_en_tolerates_lame_ocr`.
+
+Focused suites after all fixes: **81 tests OK**
+(`tests.test_truthan_ui_control tests.test_v026_baseline
+tests.test_map_entry_integration tests.test_truthan_combat
+tests.test_combat_integration`).

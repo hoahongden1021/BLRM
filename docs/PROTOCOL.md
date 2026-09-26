@@ -683,17 +683,26 @@ omitted one field. `MessageCommands.SPRITE_SKILL_MESSAGE = 136`,
 `SPRITE_SKILLRESULT_MESSAGE = 137`, `SPRITE_SKILL_LEAD_MESSAGE = 143`
 (`mmorpg/dreamgame/MessageCommands.java:589-591`). The client also dispatches
 an *incoming* 136 to `processSpriteSkillMessage()` (`case 136`,
-`GameWorld.java:7308`), so 136 is bidirectional. No cmd136 frame exists in any
-capture in `server/truthan_packet_logs/`; status stays `PARTIAL`.
+`GameWorld.java:7308`), so 136 is bidirectional.
+
+**LIVE-VERIFIED 2026-09-26** (switch `TRUTHAN_COMBAT=1`): real-client frames
+captured in `server/truthan_packet_logs/20260926_191043_*.log` and
+`20260926_201236_*.log`. The client's auto-attack chain sent RX `cmd=136`
+(19-byte body) at ~1 s cadence and every frame was answered with TX `cmd=137`
+(66-byte body); hp drain `60→45→30→15→0`, death, respawn TX `cmd=132` at
+exactly +5 s (`TRUTHAN_COMBAT_RESPAWN_MS`), then the cycle repeated. Status:
+**VERIFIED** (field table confirmed against real frames; acceptance rules and
+RECONSTRUCTED tunables are documented in `docs/RE_FINDINGS.md`).
 
 ### cmd137 reader (SPRITE_SKILLRESULT_MESSAGE)
 
 Dispatch: `case 137: processSpriteSkillResultMessage();` (`GameWorld.java:7311`).
 All offsets below are from the command body and were read directly from
 `processSpriteSkillResultMessage` (`:11411`), `readSkillActionSEData`
-(`:13177`) and `readSpriteUpdateProperty` (`:13187`). Status: `PARTIAL`
-(complete static reader; no captured cmd137 exists, so nothing here has been
-validated against a real frame).
+(`:13177`) and `readSpriteUpdateProperty` (`:13187`). Status: **VERIFIED
+2026-09-26** — the static reader was validated byte for byte against live
+66-byte cmd137 frames (`hp` trace 45/30/15/0, `hit_result = 5`,
+`src_hp = 100`, `damage = 15`).
 
 | # | Field | Type | Notes |
 |---:|---|---|---|
